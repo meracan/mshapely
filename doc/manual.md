@@ -187,7 +187,7 @@ Examples
 LINESTRING (0 0, 1 0, 2 0, 3 0, 4 0, 5 0, 6 0, 7 0, 8 0, 9 0, 10 0)
 ```
 
-#### object.dresample(density[,minDensity,maxDensity,growth])
+#### object.dresample(density[,mp,minDensity,maxDensity,growth])
 ```
   Resample object using a 2D density growth field. 
   The length of the segments are automatically calculated based on the density growth field.
@@ -199,6 +199,9 @@ LINESTRING (0 0, 1 0, 2 0, 3 0, 4 0, 5 0, 6 0, 7 0, 8 0, 9 0, 10 0)
    shape:(n,3)
        n:n density points
        3:x,y,density
+  mp:MultiPoint,optional
+   MultiPoint are part of the resampling. 
+   An error will raise if the distance between points are smaller than minDensity.
   minDensity:float,optional
     Smallest segment length. Default is 1.0.
   maxDensity:float,optional
@@ -210,25 +213,128 @@ LINESTRING (0 0, 1 0, 2 0, 3 0, 4 0, 5 0, 6 0, 7 0, 8 0, 9 0, 10 0)
 Examples
 ```python
 >>> LineString([(0,0),(30,0)]).dresample(np.array([[0,0,1]]), minDensity=1.0, maxDensity=5.0, growth=1.2)
-LINESTRING (0 0, 1 0, 2.2 0, 3.64 0, 5.368 0, 7.4416 0, 9.929919999999999 0, 12.915904 0, 16.49908479999999 0, 20.56560332814453 0, 25.28280166407226 0, 30 0)
 ```
 [![dresample.1](img/dresample.1.png)](img/dresample.1.png)
 ```python
->>> LineString([(0,0),(30,0)]).dresample(np.array([[0,0,1]]), minDensity=1.0, maxDensity=5.0, growth=1.2)
-LINESTRING (0 0, 1 0, 2.2 0, 3.64 0, 5.368 0, 7.4416 0, 9.929919999999999 0, 12.915904 0, 16.49908479999999 0, 20.56560332814453 0, 25.28280166407226 0, 30 0)
+>>> mp = MultiPoint([(100,0)])
+>>> density = np.array([[0,0,100],[100,0,1],[200,0,100]])
+>>> LineString([(0,0),(200,0)]).dresample(density=density,mp=mp,minDensity=2.0, maxDensity=100.0, growth=1.2)
 ```
 [![dresample.2](img/dresample.2.png)](img/dresample.2.png)
 ```python
->>> LineString([(0,0),(30,0)]).dresample(np.array([[0,0,1]]), minDensity=1.0, maxDensity=5.0, growth=1.2)
-LINESTRING (0 0, 1 0, 2.2 0, 3.64 0, 5.368 0, 7.4416 0, 9.929919999999999 0, 12.915904 0, 16.49908479999999 0, 20.56560332814453 0, 25.28280166407226 0, 30 0)
+>>> mp = MultiPoint([(0, 0), (0, 100),(100,100),(100,0)])
+>>> density = np.array([[0,0,1],[100,100,1]])
+>>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(density,minDensity=2.0, maxDensity=20.0, growth=1.2)
+>>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(density,mp,minDensity=2.0, maxDensity=20.0, growth=1.2)
 ```
 [![dresample.3](img/dresample.3.png)](img/dresample.3.png)
+```python
+>>> polygon = Point((0,0)).buffer(100)
+>>> hole1 = Point((-50,0)).buffer(20)
+>>> hole2 = Point((50,0)).buffer(20)
+>>> polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
+>>> density = np.array([[-100,0,5],[100,0,5]])
+>>> mp = MultiPoint([(-100, 0), (0, 100),(0,100),(0,-100)])
+>>> polygon.dresample(density,mp, minDensity=5.0, maxDensity=50.0, growth=1.2)
+```
+[![dresample.4](img/dresample.4.png)](img/dresample.4.png)
 
-#### object.dresample()
-#### object.removeHoles()
+#### object.removeHoles([,area])
+```
+  Remove small holes inside a polygon.
+  
+  Parameters
+  ----------
+  area: float
+    Default is 1.0.
+```
+Examples
+```python
+>>> polygon = Polygon([(0, 0), (0, 1),(1,1),(1,0),(0,0)],[LineString([(0.25, 0.25),(0.75,0.25) ,(0.75,0.75),(0.25, 0.75),(0.25,0.25)])])
+>>> polygon.removeHoles()
+>>> polygon.removeHoles(0.1)
+````
+[![removeHoles.1](img/removeHoles.1.png)](img/removeHoles.1.png)
 #### object.largest()
-#### object.dsimplify()
-#### object.inearest()
+```
+  Gets only the largest polygon from a MultiPolygon and GeometryCollection
+```
+Examples
+```python
+
+````
+#### object.dsimplify(density[,minDensity=1,maxDensity=10,growth=1.2])
+```
+  Simplify object from remove and simplifying shape by respecting the density growth field.
+  It mainly uses the buffer/unbuffer techniques for different density area/zone.
+  
+  Parameters
+  ----------
+ density: ndarray
+   shape:(n,3)
+       n:n density points
+       3:x,y,density
+  minDensity:float,optional
+    Smallest segment length. Default is 1.0.
+  maxDensity:float,optional
+    Largest segment length. Default is 10.0.
+  growth:float,optional
+    Density growth factor. Default is 1.2.
+```
+Examples
+```python
+````
+#### object.inearest(maxDistance[,angle,nvalue])
+```
+  Computes nearest interior nodes based on its normal and angle range.
+  
+  Parameters
+  ----------
+  maxDistance:float
+   Maximum search distance.
+  angle:float
+   Angle range. Default value is 90.0. 
+  nvalue:int
+    Number of points processed at the same time.
+  
+  Output
+  ------
+  ndarray:2D array
+   shape:(n,3)
+    n: Number of points in the original object.
+    3:x,y,density  
+  
+```
+Examples
+```python
+````
 #### object.correct()
+```
+  Remove small holes inside a polygon.
+  
+  Parameters
+  ----------
+  area: float
+    Default is 1.0.
+```
+Examples
+```python
+````
 #### object.plot()
-#### object.savePlot()
+```
+  Remove small holes inside a polygon.
+  
+  Parameters
+  ----------
+  area: float
+    Default is 1.0.
+```
+Examples
+```python
+````
+
+### Creating user guide
+
+```python
+PYTHONPATH=../mshapely/ python3 doc/doc_mshapely.py
+```

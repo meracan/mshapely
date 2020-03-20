@@ -138,7 +138,7 @@ def cArea(d):
   """
   return np.pi*np.power(d*0.5,2.)
     
-def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.01,sD=1000.0):
+def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.01):
   """
   Simplify polygons and remove points by respecting minimum density field.
   It mainly uses the buffer/unbuffer techniques for different density area/zone.
@@ -153,8 +153,6 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   growth:float
   cB:float
     Correction buffer
-  sD:float
-    Simplication distance
   
   Notes
   -----
@@ -165,7 +163,7 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   """
   steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
   # steps = np.array([10,20,40,70,100,200,400,700,1000,2000],dtype=np.float32)
-  if(sD>maxDensity):raise Exception("sD needs to be higher than maxDensity")
+  
   
   points = dsimplify_Point(points,minDensity=1,maxDensity=10,growth=1.2)
   
@@ -277,7 +275,7 @@ def _inearest_Polygon(p2,p1,angle=90.0):
   
   return m
 
-def inearest_Polygon(polygon,maxDistance=1.0,nvalue=100,angle=90.0):
+def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100):
   """
   Computes nearest interior nodes
   
@@ -287,10 +285,10 @@ def inearest_Polygon(polygon,maxDistance=1.0,nvalue=100,angle=90.0):
   polygon:Polygon
     2D array, shape(npoints,2)
   maxDistance:float
-  rDistance:float
-    Resample distance
+  angle:
   nvalue:int
     npoints to search kdtree
+  
   """
   points = polygon._np(isNorm=True,onPoint=True)
   xy=points[:,-2:]

@@ -13,13 +13,13 @@ def plotPoints(points,type='o',axe=None):
   canvas = plt if axe is None else axe
   canvas.plot(xy[:,0],xy[:,1], type)
   
-def plotPolygon(polygon,type='-',axe=None,):
+def plotPolygon(polygon,type='-',axe=None,style="plot",color=None):
+  # style="plot","fill"
   xy = polygon.exterior.xy
   canvas = plt if axe is None else axe
-  canvas.plot(xy[:,0],xy[:,1], type)
-  for interior in list(polygon.interiors):
-    xy = interior.xy
-    canvas.plot(xy[:,0],xy[:,1], type)
+  xy=polygon.xy[:,-2:]
+  if style=="plot":canvas.plot(xy[:,0],xy[:,1], type,color=color)
+  else:canvas.fill(xy[:,0],xy[:,1], type,color=color)
   
 
 def plotLineString(linestring,type='-',axe=None,):
