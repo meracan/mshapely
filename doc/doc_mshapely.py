@@ -5,6 +5,7 @@ from shapely.geometry import Point,LineString,Polygon,MultiPoint,MultiLineString
 import matplotlib.pyplot as plt
 import mshapely
 
+
 def test_general():
   
   print(">>> Point(0,0).np")    
@@ -124,9 +125,57 @@ def test_general():
     .plot("o-",axes[1][0],style="fill").plot("o",axes[1][0],color="black")
   polygon.savePlot("doc/img/removeHoles.1.png")
   
+  print("")
+  print(">>> MultiPolygon([Polygon([(0,0),(1,0),(1,1),(0,1),(0,0)]),Polygon([(0,0),(-0.5,0),(-0.5,-0.5),(0,-0.5),(0,0)])]).largest()")
+  fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+  fig.tight_layout()
+  MultiPolygon([Polygon([(0,0),(1,0),(1,1),(0,1),(0,0)]),Polygon([(0,0),(-0.5,0),(-0.5,-0.5),(0,-0.5),(0,0)])])\
+  .plot("o-",axes[0],style="fill").plot("o",axes[0],color="black")\
+  .largest().plot("o-",axes[1],style="fill").plot("o",axes[1],color="black")\
+  .savePlot("doc/img/largest.1.png")
+  
+def test_general2():
+  # print("")
+  # print(mshapely.MultiDensity([[0,0,1],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]).dsimplify())
+  # print(mshapely.dsimplify_Point(np.array([[0,0,1.],[10,0,5],[20,0,2],[30,0,1],[40,0,3]])))
+  
+  
+  
+  print("")
+  
+  fig, axes = plt.subplots(nrows=3, ncols=3, figsize=(10, 10))
+  fig.tight_layout()
+  exterior=Point(0,0).buffer(100).exterior
+  holes = [
+    Point(10,0).buffer(5).exterior.coords[::-1],
+    Point(25,0).buffer(5).exterior.coords[::-1],
+    Point(70,0).buffer(5).exterior.coords[::-1],
+    Point(85,0).buffer(5).exterior.coords[::-1],
+    
+    Point(0,15).buffer(10).exterior.coords[::-1],
+    Point(0,40).buffer(10).exterior.coords[::-1],
+    Point(0,65).buffer(10).exterior.coords[::-1],
+    Point(0,87.5).buffer(10).exterior.coords[::-1],
+    
+    ]
+  
+  
+  polygon = Polygon(exterior,holes)
+  polygon.plot("o-",axes[0][0])
+  polygon.dsimplify(np.array([[0,0,1]]),minDensity=1,maxDensity=100).plot("o-",axes[0][1])
+  polygon.dsimplify(np.array([[0,0,5]]),minDensity=5,maxDensity=100).plot("o-",axes[0][2])
+  polygon.dsimplify(np.array([[0,0,10]]),minDensity=10,maxDensity=100).plot("o-",axes[1][0])
+  polygon.dsimplify(np.array([[0,0,20]]),minDensity=20,maxDensity=100).plot("o-",axes[1][1])
+  polygon.dsimplify(np.array([[0,0,100]]),minDensity=100,maxDensity=1000).plot("o-",axes[1][2])
+  polygon.dsimplify(np.array([[0,0,5],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][0])
+  polygon.dsimplify(np.array([[0,0,10],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][1])
+  polygon.dsimplify(np.array([[0,0,20],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][2])
+  polygon.savePlot("doc/img/dsimplify.1.png")
+  
   None
   
 if __name__ == "__main__":
-  test_general()
+  # test_general()
+  test_general2()
   
   

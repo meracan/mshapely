@@ -255,18 +255,22 @@ Examples
 >>> polygon.removeHoles(0.1)
 ````
 [![removeHoles.1](img/removeHoles.1.png)](img/removeHoles.1.png)
+
 #### object.largest()
 ```
   Gets only the largest polygon from a MultiPolygon and GeometryCollection
 ```
 Examples
 ```python
-
+>>> MultiPolygon([Polygon([(0,0),(1,0),(1,1),(0,1),(0,0)]),Polygon([(0,0),(-0.5,0),(-0.5,-0.5),(0,-0.5),(0,0)])]).largest()
 ````
-#### object.dsimplify(density[,minDensity=1,maxDensity=10,growth=1.2])
+[![largest.1](img/largest.1.png)](img/largest.1.png)
+
+#### mshapely.MultiDensity.dsimplify([,minDensity=1,maxDensity=10,growth=1.2])
+#### mshapely.dsimplify_Point(density[,minDensity=1,maxDensity=10,growth=1.2])
 ```
   Simplify object from remove and simplifying shape by respecting the density growth field.
-  It mainly uses the buffer/unbuffer techniques for different density area/zone.
+  For Polygon, it mainly uses the buffer/unbuffer techniques for different density area/zone.
   
   Parameters
   ----------
@@ -283,7 +287,44 @@ Examples
 ```
 Examples
 ```python
+>>> mshapely.MultiDensity([[0,0,1],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]).dsimplify()
+[[ 0.  0.  1.]
+ [20.  0.  2.]
+ [30.  0.  1.]]
+>>> mshapely.dsimplify_Point(np.array([[0,0,1.],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]))
+[[ 0.  0.  1.]
+ [20.  0.  2.]
+ [30.  0.  1.]]
 ````
+
+```python
+>>> holes = [
+    Point(10,0).buffer(5).exterior.coords[::-1],
+    Point(25,0).buffer(5).exterior.coords[::-1],
+    Point(70,0).buffer(5).exterior.coords[::-1],
+    Point(85,0).buffer(5).exterior.coords[::-1],
+    
+    Point(0,15).buffer(10).exterior.coords[::-1],
+    Point(0,40).buffer(10).exterior.coords[::-1],
+    Point(0,65).buffer(10).exterior.coords[::-1],
+    Point(0,87.5).buffer(10).exterior.coords[::-1],
+    
+    ]
+  
+  
+>>> polygon = Polygon(exterior,holes)
+>>> polygon.plot("o-",axes[0][0])
+>>> polygon.dsimplify(np.array([[0,0,1]]),minDensity=1,maxDensity=100).plot("o-",axes[0][1])
+>>> polygon.dsimplify(np.array([[0,0,5]]),minDensity=5,maxDensity=100).plot("o-",axes[0][2])
+>>> polygon.dsimplify(np.array([[0,0,10]]),minDensity=10,maxDensity=100).plot("o-",axes[1][0])
+>>> polygon.dsimplify(np.array([[0,0,20]]),minDensity=20,maxDensity=100).plot("o-",axes[1][1])
+>>> polygon.dsimplify(np.array([[0,0,100]]),minDensity=100,maxDensity=1000).plot("o-",axes[1][2])
+>>> polygon.dsimplify(np.array([[0,0,5],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][0])
+>>> polygon.dsimplify(np.array([[0,0,10],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][1])
+>>> polygon.dsimplify(np.array([[0,0,20],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][2])
+```
+[![dsimplify.1](img/dsimplify.1.png)](img/dsimplify.1.png)
+
 #### object.inearest(maxDistance[,angle,nvalue])
 ```
   Computes nearest interior nodes based on its normal and angle range.
@@ -310,24 +351,36 @@ Examples
 ````
 #### object.correct()
 ```
-  Remove small holes inside a polygon.
+  Correct geometric object using the buffer functionality
   
-  Parameters
-  ----------
-  area: float
-    Default is 1.0.
+  Note
+  ----
+  The constant mshapely.CB is used.
 ```
 Examples
 ```python
 ````
 #### object.plot()
 ```
-  Remove small holes inside a polygon.
+  Plot geometry object in matplotlib
   
   Parameters
   ----------
-  area: float
-    Default is 1.0.
+  type:
+  axe:
+  color:
+  style:
+```
+Examples
+```python
+````
+#### object.savePlot(path)
+```
+  Save plot to file
+  
+  Parameters
+  ----------
+  path: filepath
 ```
 Examples
 ```python

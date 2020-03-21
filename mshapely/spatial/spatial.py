@@ -161,8 +161,7 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   TODO: points should be replace by features to include points,lines and polygons
     
   """
-  steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
-  # steps = np.array([10,20,40,70,100,200,400,700,1000,2000],dtype=np.float32)
+  
   
   
   points = dsimplify_Point(points,minDensity=1,maxDensity=10,growth=1.2)
@@ -171,8 +170,17 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   density = points[:, 2]
   udensity = np.unique(density)
   
+  
+  
+  
+  steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
+  steps=steps[steps<polygon.length]
+  maxDensity=np.minimum(maxDensity,polygon.length*0.1)
+  
+  
   n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
   maxDistance = (minDensity*np.power(growth,n+1)-minDensity)/(growth-1)
+  
   polygon =polygon.correct(cB) 
   opolygon=polygon
   
@@ -184,29 +192,39 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
       _n=np.floor(np.log(d*(growth-1)/unique+1)/np.log(growth))
       _d = np.maximum(minDensity,unique*np.power(growth,_n))
 
-      ozone=tpolygon.intersection(mps).correct(cB)
-      zone=ozone.buffer(-_d*0.1).buffer(_d*0.1).correct(cB).removeHoles(cArea(_d*0.1)).simplify(_d*0.01).correct(cB)
-      ozones.append(ozone)
-      zones.append(zone)
+      ozone=tpolygon.intersection(mps).removeHoles(0.001)
+      zone=ozone.buffer(-_d*0.2).buffer(_d*0.2).removeHoles(cArea(_d*0.1)).simplify(_d*0.01).correct(cB)
       
-    ozones=cascaded_union(ozones).correct(cB)  
-    zones=cascaded_union(zones).correct(cB)  
-    return ozones,zones
+      ozones.append(zone.getExterior())
+      zones.append(zone)
+    
+    ozones=cascaded_union(ozones).buffer(0.01)
+    zones=cascaded_union(zones)
+    # zones.plot("o-")
+    return zones,ozones
   
   
   def process(domain,newdomain,prev,d,outline=None):
-    if outline is None:
-      ozones,zones = getZones(domain,d)
-    else:
-      zones=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1).correct(cB).removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01).correct(cB)
+    if outline is not None:
+      newzones=outline.difference(prev).buffer(0.01)
+      if not newzones.is_empty: 
+        newdomain=newdomain.union(newzones).removeHoles(0.01).simplify(0)
+      return newdomain,prev
       
+    zones,ozones = getZones(domain,d)
+    if newdomain is None:return zones,ozones
+    if zones.is_empty:return newdomain,prev
     
-    if newdomain is None:
-      newdomain=zones
-      prev=ozones
-    else:
-      zones=zones.difference(prev).correct(cB)
-      newdomain=newdomain.union(zones).correct(cB)
+    
+    
+    newzones=zones.difference(prev).buffer(0.01)
+    # if i==2:newzones.plot("-")
+    if not ozones.is_empty:prev=ozones
+    if newzones.is_empty: return newdomain,prev
+    # newzones.plot("-")
+    # print(newzones.type)
+    newdomain=newdomain.union(newzones).removeHoles(0.01).simplify(0)
+    # if i==2:newdomain.plot("o-")
     return newdomain,prev
   
   
@@ -220,16 +238,24 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
     if(i%8==0):
       _nn=np.floor(np.log(d*(growth-1)/minDensity+1)/np.log(growth))
       _dd = np.maximum(minDensity,minDensity*np.power(growth,_nn))
-      opolygon=opolygon.simplify(_dd*0.1,False).correct(cB)
+      opolygon=opolygon.simplify(_dd*0.01)
+      # opolygon=opolygon.simplify(_dd*0.1).correct(cB)
     ndomain,prev=process(opolygon,ndomain,prev,d)
-    ndomain.plot()
+    # ndomain.plot()
     t.update(1)
   t.close()
   
-  
-  ndomain,prev=process(opolygon.simplify(_dd*0.1).correct(cB),ndomain,prev,maxDistance,polygon.simplify(_dd*0.1).correct(cB))
-  
-  ndomain.savePlot("../domain.png")
+  # prev.plot("o-")
+  # ndomain.plot("o-")
+    
+  outline=polygon.simplify(_dd*0.1)
+  outline=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1)
+  if not outline.is_empty:
+    outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01).correct(cB)
+    
+    ndomain,prev=process(None,ndomain,prev,maxDistance,outline)
+    
+  # ndomain.plot("o-")
   
   
   return ndomain

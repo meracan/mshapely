@@ -91,7 +91,7 @@ class OSM(object):
     if not os.path.exists(output):
       if(f.__name__=="_transform"):
         path=self.path[name]
-        collection=mshapely.readGeoJSON(path)
+        collection=mshapely.readGeometry(path)
         geo=collection['geometry']
         properties=collection['properties']
         geo = f(geo)
@@ -101,7 +101,7 @@ class OSM(object):
         geo.write(output,type="geojson")
         transform(self.togeo, geo).write(self.path[name],type="geojson")
       
-    return mshapely.readGeoJSON(output)
+    return mshapely.readGeometry(output)
   
   
   def _transform(self,geo):
