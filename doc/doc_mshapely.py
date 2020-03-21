@@ -173,9 +173,21 @@ def test_general2():
   polygon.savePlot("doc/img/dsimplify.1.png")
   
   None
+
+def test_general3():
+  polygon = Point((0,0)).buffer(100)
+  hole1 = Point((-50,0)).buffer(20)
+  hole2 = Point((50,0)).buffer(20)
+  polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
+  density=polygon.inearest(maxDistance=100,angle=90)
+  MultiPoint(density[:,:2]).plot(colors=density[:,2])
+  plt.colorbar()
+  polygon.savePlot("doc/img/inearest.1.png")
+  None
   
 if __name__ == "__main__":
   # test_general()
-  test_general2()
+  # test_general2()
+  test_general3()
   
   

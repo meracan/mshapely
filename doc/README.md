@@ -348,7 +348,13 @@ Examples
 ```
 Examples
 ```python
+>>> polygon = Point((0,0)).buffer(100)
+>>> hole1 = Point((-50,0)).buffer(20)
+>>> hole2 = Point((50,0)).buffer(20)
+>>> polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
+>>> density=polygon.inearest(maxDistance=100,angle=90)
 ````
+[![inearest.1](img/inearest.1.png)](img/inearest.1.png)
 #### object.correct()
 ```
   Correct geometric object using the buffer functionality
@@ -359,6 +365,7 @@ Examples
 ```
 Examples
 ```python
+
 ````
 #### object.plot()
 ```
