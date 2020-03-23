@@ -18,7 +18,7 @@ from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring
 
 # from .transformation import pieSectors
 
-from .spatial import removeHoles_Polygon,dsimplify_Point,dsimplify_Polygon,\
+from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Point,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
 
 
@@ -41,10 +41,13 @@ class MultiDensity(MultiPoint):
 @add_method([GeometryCollection,Polygon,MultiPolygon])
 def toShape(self):
   if isinstance(self[0],Point):
+    if len(self)==1:return Point(self[0])
     return MultiPoint(self)
   elif isinstance(self[0],LineString):
+    if len(self)==1:return LineString(self[0])
     return MultiLineString(self)
   elif isinstance(self[0],Polygon):
+    if len(self)==1:return Polygon(self[0])
     return MultiPolygon(self)
   elif isinstance(self[0],MultiPoint):
     l=[]
@@ -178,11 +181,11 @@ def resample(self, *args, **kwargs):
 # Resample Density
 #
 @add_method(GeometryCollection)
-def dresample(self):
-  return self.toShape().dresample()
+def dresample(self, *args, **kwargs):
+  return self.toShape().dresample(*args, **kwargs)
 
 @add_method([Point,MultiPoint,MultiDensity])
-def dresample(self):
+def dresample(self, *args, **kwargs):
   return self
 
 @add_method(LineString)
@@ -244,6 +247,22 @@ def removeHoles(self, *args, **kwargs):
 @add_method(MultiPolygon)
 def removeHoles(self, *args, **kwargs):
   return MultiPolygon([polygon.removeHoles(*args, **kwargs) for polygon in self])
+# 
+# Remove Polygons
+# 
+@add_method(GeometryCollection)
+def removePolygons(self, *args, **kwargs):
+  return self.toShape().removePolygons(*args, **kwargs)
+  
+@add_method([Point,MultiPoint,LineString,MultiLineString,MultiDensity,Polygon])
+def removePolygons(self, *args, **kwargs):
+  return self
+
+@add_method(MultiPolygon)
+def removePolygons(self, *args, **kwargs):
+  return remove_Polygons(self, *args, **kwargs)
+
+
 
 # 
 # Get largest
@@ -278,7 +297,7 @@ def correct(self,value):
   return self.buffer(value)
 
 #
-# Simplify Density
+# Get exterior shape
 #
 @add_method(GeometryCollection)
 def getExterior(self,*args,**kwargs):
@@ -296,7 +315,21 @@ def getExterior(self,*args,**kwargs):
 def getExterior(self,*args,**kwargs):
   return MultiPolygon([Polygon(polygon.exterior) for polygon in self])
 
+#
+# Modify intersection function
+#
+_intersection = Polygon.intersection
+@add_method(Polygon)
+def intersection(self,*args,**kwargs):
+  return _intersection(self,*args,**kwargs)#.removeHoles(1).removePolygons(10).simplify(0)
 
+#
+# Modify union function
+#
+_union = Polygon.union
+@add_method(Polygon)
+def union(self,*args,**kwargs):
+  return _union(self,*args,**kwargs)#.removeHoles(1).removePolygons(10).simplify(0)
 
 
 #

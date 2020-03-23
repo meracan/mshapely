@@ -1,7 +1,7 @@
 import warnings
 import numpy as np
 from scipy import spatial
-from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoint,MultiLineString,GeometryCollection
+from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoint,MultiLineString,MultiPolygon,GeometryCollection
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 from ..linalg import norm,rotate
@@ -27,6 +27,29 @@ def removeHoles_Polygon(polygon, area=1.0):
   interiors = [interiors[i].exterior for i in indexes]
   
   return Polygon(polygon.exterior,interiors)
+
+def remove_Polygons(polygons, area=1.0):
+  """
+  Remove small polygons based on area
+  
+  Parameters
+  ----------
+  polygons:MultiPolygon 
+  area: 
+    default=1.0
+  
+  Example
+  ------ 
+  TODO
+  """     
+  # interiors = [Polygon(interior) for interior in list(polygon.interiors)]
+  # print("Julien")
+  areas = np.array([polygon.area for polygon in list(polygons)])
+  indexes = np.where(areas > area)[0]
+  polygons = [polygons[i] for i in indexes]
+  if len(polygons)==1:return polygons[0]
+  return MultiPolygon(polygons)
+
 
 def _ll2numpy(l):
   """
@@ -174,6 +197,7 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   
   
   steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
+  # steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4],dtype=np.float32)
   steps=steps[steps<polygon.length]
   maxDensity=np.minimum(maxDensity,polygon.length*0.1)
   
@@ -181,7 +205,7 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
   maxDistance = (minDensity*np.power(growth,n+1)-minDensity)/(growth-1)
   
-  polygon =polygon.correct(cB) 
+  polygon =polygon
   opolygon=polygon
   
   def getZones(tpolygon,d):
@@ -192,13 +216,14 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
       _n=np.floor(np.log(d*(growth-1)/unique+1)/np.log(growth))
       _d = np.maximum(minDensity,unique*np.power(growth,_n))
 
-      ozone=tpolygon.intersection(mps).removeHoles(0.001)
-      zone=ozone.buffer(-_d*0.2).buffer(_d*0.2).removeHoles(cArea(_d*0.1)).simplify(_d*0.01).correct(cB)
+      ozone=tpolygon.intersection(mps)
+      zone=ozone.buffer(-_d*0.2).buffer(_d*0.2).removeHoles(cArea(_d*0.1)).simplify(_d*0.01)
       
-      ozones.append(zone.getExterior())
+      ozones.append(zone.getExterior().union(mps.buffer(-_d*0.2)))
+      # ozones.append(mps)
       zones.append(zone)
     
-    ozones=cascaded_union(ozones).buffer(0.01)
+    ozones=cascaded_union(ozones)
     zones=cascaded_union(zones)
     # zones.plot("o-")
     return zones,ozones
@@ -206,25 +231,21 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   
   def process(domain,newdomain,prev,d,outline=None):
     if outline is not None:
-      newzones=outline.difference(prev).buffer(0.01)
+      newzones=outline.difference(prev).buffer(1)
+      
       if not newzones.is_empty: 
-        newdomain=newdomain.union(newzones).removeHoles(0.01).simplify(0)
+        newdomain=newdomain.union(newzones).buffer(0.01).simplify(1)
       return newdomain,prev
       
     zones,ozones = getZones(domain,d)
     if newdomain is None:return zones,ozones
     if zones.is_empty:return newdomain,prev
-    
-    
-    
-    newzones=zones.difference(prev).buffer(0.01)
-    # if i==2:newzones.plot("-")
+    newzones=zones.difference(prev).buffer(1)
+    # if i==11:newzones.plot("o-")
     if not ozones.is_empty:prev=ozones
     if newzones.is_empty: return newdomain,prev
-    # newzones.plot("-")
-    # print(newzones.type)
-    newdomain=newdomain.union(newzones).removeHoles(0.01).simplify(0)
-    # if i==2:newdomain.plot("o-")
+    newdomain=newdomain.union(newzones).buffer(0.01).simplify(1)
+    # if i==11:newdomain.plot("o-")
     return newdomain,prev
   
   
@@ -239,7 +260,6 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
       _nn=np.floor(np.log(d*(growth-1)/minDensity+1)/np.log(growth))
       _dd = np.maximum(minDensity,minDensity*np.power(growth,_nn))
       opolygon=opolygon.simplify(_dd*0.01)
-      # opolygon=opolygon.simplify(_dd*0.1).correct(cB)
     ndomain,prev=process(opolygon,ndomain,prev,d)
     # ndomain.plot()
     t.update(1)
@@ -247,14 +267,14 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   
   # prev.plot("o-")
   # ndomain.plot("o-")
-    
+  t=tqdm(total=1, unit_scale=True)  
   outline=polygon.simplify(_dd*0.1)
   outline=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1)
   if not outline.is_empty:
-    outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01).correct(cB)
+    outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01)
     
     ndomain,prev=process(None,ndomain,prev,maxDistance,outline)
-    
+  t.update(1);t.close()  
   # ndomain.plot("o-")
   
   

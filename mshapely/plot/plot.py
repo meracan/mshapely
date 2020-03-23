@@ -48,18 +48,18 @@ def plotPolygon(polygon,type='-',axe=None,style="plot",color=None):
   patch = PathPatch(path, facecolor=color, edgecolor='black')
 
   # Centering
-  xy=polygon.xy
-  xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
-  ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
-  canvas.set_xlim(-100, 100)
-  canvas.set_ylim(-100, 100)
-  canvas.add_patch(patch)
+  # xy=polygon.xy
+  # xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
+  # ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
+  # canvas.set_xlim(-100, 100)
+  # canvas.set_ylim(-100, 100)
+  # canvas.add_patch(patch)
   
-  # xy=polygon.exterior.xy
-  # canvas.plot(xy[:,0],xy[:,1],type)
-  # for interior in polygon.interiors:
-  #   xy=interior.xy
-  #   canvas.plot(xy[:,0],xy[:,1],type)
+  xy=polygon.exterior.xy
+  canvas.plot(xy[:,0],xy[:,1],type)
+  for interior in polygon.interiors:
+    xy=interior.xy
+    canvas.plot(xy[:,0],xy[:,1],type)
   
 
 def plotLineString(linestring,type='-',axe=None,):

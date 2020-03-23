@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import mshapely
 
 
-def test_general():
+def doc_general():
   
   print(">>> Point(0,0).np")    
   print(Point(0,0).np)
@@ -134,7 +134,7 @@ def test_general():
   .largest().plot("o-",axes[1],style="fill").plot("o",axes[1],color="black")\
   .savePlot("doc/img/largest.1.png")
   
-def test_general2():
+def doc_general2():
   # print("")
   # print(mshapely.MultiDensity([[0,0,1],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]).dsimplify())
   # print(mshapely.dsimplify_Point(np.array([[0,0,1.],[10,0,5],[20,0,2],[30,0,1],[40,0,3]])))
@@ -174,7 +174,7 @@ def test_general2():
   
   None
 
-def test_general3():
+def doc_general3():
   polygon = Point((0,0)).buffer(100)
   hole1 = Point((-50,0)).buffer(20)
   hole2 = Point((50,0)).buffer(20)
@@ -186,8 +186,8 @@ def test_general3():
   None
   
 if __name__ == "__main__":
-  # test_general()
-  # test_general2()
-  test_general3()
+  doc_general()
+  # doc_general2()
+  # doc_general3()
   
   

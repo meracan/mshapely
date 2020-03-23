@@ -12,6 +12,31 @@ from ..io import writeGeometry
 
 
 class OSM(object):
+  """
+  OSM instance prepares the osm coastline using spatial manipulation for gmsh, such as
+  downloading,extracting,simplifying and resampling for gmsh.
+  
+  Parameters
+  ----------
+  The instance requires one object parameter that contains input and output variables.
+  
+  obj: object
+    path: object
+      osm:path, input
+      domain:path,input
+      density:path,input
+      osmDomain:path,output
+      osmSimplify:path,output
+      osmResample:path,output
+    minDensity:float,input
+    maxDensity:float,input
+    growth:float,input
+    
+  Note
+  ----
+  Any spatial manipulation is performed on the LAEA projection (north pole).
+  Results are converted back to geographic coordinates.
+  """
   def __init__(self,obj):
     self.path = obj['path']
     
@@ -29,14 +54,41 @@ class OSM(object):
     self.reset()
   
   def reset(self):
+    # Input
     self._osm=None
     self._domain=None
     self._density=None
+    
+    # Ouput
     self._osmDomain=None
     self._osmSimplify=None
-    self._osmFetch=None
     self._osmResample=None  
 
+  def _get(self,name,f):
+    """
+    Property wrapper to read/write outfile files. 
+    If file does not exist, it will run the function and than write to file.
+    If file exist, it will read directly from file.
+    """
+    output=self._projPath(self.path[name])
+    if not os.path.exists(output):
+      if(f.__name__=="_transform"):
+        path=self.path[name]
+        collection=mshapely.readGeometry(path)
+        geo=collection['geometry']
+        properties=collection['properties']
+        geo = f(geo)
+        geo.write(output,properties=properties,type="geojson")
+      else:
+        geo = f()
+        geo.write(output,type="geojson")
+        transform(self.togeo, geo).write(self.path[name],type="geojson")
+      
+    return mshapely.readGeometry(output)
+  
+  """
+  Below is the proerties that uses the _get wrapper
+  """
   @property
   def osm(self):
     if self._osm is None:
@@ -68,92 +120,86 @@ class OSM(object):
     if self._osmSimplify is None:
       self._osmSimplify = self._get('osmSimplify',self._getosmSimplify)['geometry']
     return self._osmSimplify
-
-  @property
-  def osmFetch(self):
-    if self._osmFetch is None:
-      self._osmFetch = self._get('osmFetch',self._getosmFetch)['geometry']
-    return self._osmFetch
   
   @property
   def osmResample(self):
+    print("here")
     if self._osmResample is None:
       self._osmResample = self._get('osmResample',self._getosmResample)['geometry']
     return self._osmResample
 
+  
   def _projPath(self,path):
+    """
+    Get projected path of the output 
+    """
     return "{}.proj.geojson".format(os.path.splitext(path)[0]) 
-    
-  def _get(self,name,f):
-    # Wrapper
-    output=self._projPath(self.path[name])
-    
-    if not os.path.exists(output):
-      if(f.__name__=="_transform"):
-        path=self.path[name]
-        collection=mshapely.readGeometry(path)
-        geo=collection['geometry']
-        properties=collection['properties']
-        geo = f(geo)
-        geo.write(output,properties=properties,type="geojson")
-      else:
-        geo = f()
-        geo.write(output,type="geojson")
-        transform(self.togeo, geo).write(self.path[name],type="geojson")
-      
-    return mshapely.readGeometry(output)
-  
-  
+  def _geoPath(self,path):
+    """
+    Get geographic path of the output 
+    """
+    return "{}.geojson".format(os.path.splitext(path)[0]) 
+
   def _transform(self,geo):
+    """
+    Transform geographic to projection
+    """
     tolaea=self.tolaea
     return transform(tolaea, geo)
 
   def _getosmDomain(self):
+    """
+    Extract osm coastline using the domain.
+    It will only keep the largest Polygon.
+    """
     geo = self.osm
     minDensity = self.minDensity
     cB = self.cB
     domain = self.domain
-    t=tqdm(total=3, unit='iB', unit_scale=True)
-    geo=geo.simplify(minDensity*0.1).correct(cB)
-    t.update(1)
-    geo=geo.intersection(domain).correct(cB)
-    t.update(1)
-    geo =geo.largest()
-    t.update(1)
-    t.close()
+    t=tqdm(total=6)
+    geo=geo.simplify(0.1);t.update(1)
+    geo=geo.buffer(0.01);t.update(1)
+    geo=geo.simplify(0.1);t.update(1)
+    geo=geo.intersection(domain);t.update(1)
+    geo=geo.largest().buffer(0.01);t.update(1)
+    geo=geo.simplify(0.1);t.update(1);t.close()
+    
     return geo
 
   def _getosmSimplify(self):
+    """
+    Simplify osm shoreline based on density field
+    """
     geo=self.osmDomain
     geo=geo.dsimplify(self.density,self.minDensity,self.maxDensity,self.growth)
     geo=geo.largest()
+    # geo.plot()
+    # geo.savePlot("../data/example1.simplify.png")
     return geo
     
-  def _getosmFetch(self):
+  def _getosmResample(self):
+    """
+    Resample osm shoreline using interior nearest points and density growth field.
+    """
     geo=self.osmSimplify
-    print("here")
-    geo=geo.simplify(1).correct(0.01)
-    # print(geo.exterior.is_ccw)
-    # for int in geo.interiors:
-    #   print(int.is_ccw)
-    # raise Exception("a")
-    density=geo.fetch(maxDistance=self.maxDensity,angle=30.0)
-    density[:,2]=density[:,2]*0.25 # TODO, this should be related to growth,distance
-    density = np.concatenate((density,self.density))
+    # geo=geo.largest()
+    density=geo.inearest(maxDistance=self.maxDensity,angle=30.0)
+    density[:,2]=density[:,2]*0.2
+    density = np.concatenate((density,self.density)) # Combine inearest and density growth field
     
     geo=geo.dresample(density,minDensity=self.minDensity,maxDensity=self.maxDensity,growth=self.growth)
     # geo.plot()
     # geo.savePlot('../data/test_fetch.png')
-    geo=MultiPoint(geo.xy)
+    # geo=MultiPoint(geo.xy)
     
     return geo
     
-  def _getosmResample(self):
-    geo=self.osmFetch
-    return geo
-  
   @staticmethod
   def downloadOSM(folder,overwrite=False):
+    """
+    Download OSM coastline file (600MB). 
+    This geometry is splitted into partions (simarlar to a kdtree).
+    """
     http = 'https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip'
     name = os.path.basename(http)
     osmPath =os.path.join(folder,name)
@@ -172,6 +218,11 @@ class OSM(object):
 
   @staticmethod
   def extractOSM(osmPath,outPath,extent):
+    """
+    Extract osm coastline from zip file based on extent.
+    This requires gdal (ogr2ogr).
+    This avoids unpacking the zip file.
+    """
     zipname = 'water-polygons-split-4326/water_polygons.shp'
     zipPath = "\"/vsizip/" + osmPath + "/" + zipname + "\""
     name = os.path.basename(osmPath)
