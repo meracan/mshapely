@@ -146,7 +146,7 @@ def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, mingrowth=1.2,balan
     
     keepindices[x:xn]=iii
     
-  
+  # print(points[np.where(xy[:,1]<-4020000)[0],2])
   uniques=np.unique(keepindices)
   return points[uniques]
 
@@ -332,7 +332,7 @@ def _inearest_Polygon(p2,p1,angle=90.0):
   VV1=V1/targets[:,:,None]
   indices=(_CrossProduct(V2R1[:,None], VV1) >= 0) & (_CrossProduct(VV1, V2R2[:,None]) >= 0)
   
-  maxValue=np.max(targets)
+  maxValue=np.maximum(1,np.max(targets))
   targets[np.invert(indices)]=maxValue
   targets[targets==0]=maxValue
   

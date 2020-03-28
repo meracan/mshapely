@@ -16,7 +16,6 @@ from .misc import add_attribute,add_method
 from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,\
   multilinestring2numpy,multipolygon2numpy
 
-from .io import createGEO,createMSH
 
 # from .transformation import pieSectors
 
@@ -343,28 +342,6 @@ def union(self,*args,**kwargs):
   return _union(self,*args,**kwargs)#.removeHoles(1).removePolygons(10).simplify(0)
 
 
-#
-# Create Gmsh
-#
-@add_method(GeometryCollection)
-def msh(self,*args,**kwargs):
-  return self.toShape().gmsh(*args,**kwargs)
-
-
-@add_method([Point,MultiPoint,LineString,MultiLineString])
-def msh(self,*args,**kwargs):
-  return self
-  
-@add_method(Polygon)
-def msh(self,path,density,*args,**kwargs):
-  geo = createGEO(self,path,density,*args,**kwargs)
-  return createMSH(geo,path)
-
-@add_method(MultiPolygon)
-def msh(self,*args,**kwargs):
-  geo=self.largest()
-  geo.msh(*args,**kwargs)
-  return geo
 
 #
 # Simplify Density

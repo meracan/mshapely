@@ -1,36 +1,35 @@
 # MERACAN Shapely
 A shapely wrapper to manipulate spatial data for Marine Energy Resource Assessment Canada.
-
+Mesh generation is currently intertwine with mshapely. There is a plan to extract it and create a seperate package.
 
 
 ## Installation
-
-
-This library was only tested using anaconda. 
-Shapely and gdal might cause issues with pip only.
+This library was only tested using conda.
+It requires shapely,fiona,gdal and gmsh.
+These packages might cause issues with pip.
 ```bash
-# To be able to run gmsh
-sudo yum install mesa-libGL
-
 conda create -n mshapely python=3.8
 conda activate mshapely
 
-conda install -c conda-forge numpy scipy fiona shapely gdal geojson tqdm matplotlib gmsh python-gmsh
+conda install -c conda-forge numpy scipy fiona shapely pyproj requests gdal geojson tqdm matplotlib gmsh 
+# git clone https://github.com/meracan/mshapely.git
+# pip install -e ./mshapely
 
-# To plot mesh
+# On AWS VM
+sudo yum install mesa-libGL
 
-git clone https://github.com/meracan/mshapely.git
-pip install -e ./mshapely
 
 ```
 
 
-## Usage
+### Usage
 ```python
 import mshapely
 ```
-[### User Guide and Examples](doc/README.md)
+### User Guide and Examples
+[Docs](doc/README.md)
 
+###
 
 
 
@@ -43,9 +42,6 @@ pytest
 ```
 
 For developers and debugging:
-
-
-
 ```bash
 mkdir ../data
 cd mshapely
