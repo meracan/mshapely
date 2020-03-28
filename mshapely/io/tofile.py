@@ -31,6 +31,8 @@ def writeGeometry(geometry, path, schema=None, properties=None, type="geojson"):
     if properties is not None: return properties
     return [dict(id=i) for i, f in enumerate(geometry)]
   
+  if geometry.is_empty:raise Exception("geometry is empty")
+
   geometry = geometry if isinstance(geometry, (list,GeometryCollection)) else [geometry]
   
   schema = getSchema(geometry, schema)

@@ -3,6 +3,7 @@ import numpy as np
 from scipy import spatial
 from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoint,MultiLineString
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
+from tqdm import tqdm
 
 from .spatial import dsimplify_Point
 
@@ -74,7 +75,7 @@ def resample_Polygon(polygon, *args, **kwargs):
   return exterior.difference(interiors)
 
 
-def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0, growth=1.2):
+def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,kdtree=None,_density=None,progress=False):
   """ 
   Resample linestring based on density points
   
@@ -83,29 +84,37 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0, 
   density : 2D array points [n,xyd]
   minDensity: minimum density (default=1.0)
   minDensity: minimum density (default=10.0)
-  growth: mesh growth factor (default=1.2)
+  mingrowth: mesh growth factor (default=1.2)
   
   Example
   ------ 
   TODO
   """
   if(linestring.length<minDensity):warnings.warn("LineString is shorter than minDensity")
-  if(linestring.length<minDensity*np.power(growth,0)):return linestring
-  if(maxDensity<minDensity*np.power(growth,2)):
-    maxDensity=minDensity*np.power(growth,2)
   
-  # print(density.shape)
   
-  density = dsimplify_Point(density,minDensity=1,maxDensity=10,growth=1.2)
+  # TODO density and kdtree should be done outside
+  if _density is None:
+    _density = dsimplify_Point(density,minDensity=1,maxDensity=10)
   
-  points = density[:, [0, 1]]
-  density = density[:, 2]
+  points = _density[:, [0, 1]]
+  density = _density[:, 2]
+  growth = _density[:, 3]
+  mingrowth=np.min(growth)
+  
+  
+  if(linestring.length<minDensity*np.power(mingrowth,0)):return linestring
+  if(maxDensity<minDensity*np.power(mingrowth,2)):
+    maxDensity=minDensity*np.power(mingrowth,2)
+  
+  
   density[density<minDensity]=minDensity
   density[density>maxDensity]=maxDensity
-  
-  kdtree = spatial.cKDTree(points)
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
-  maxDistance = (minDensity*np.power(growth,n+1)-minDensity)/(growth-1)
+  if kdtree is None:
+    kdtree = spatial.cKDTree(points)
+    
+  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
+  maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
   
   def getDistance(_p):
     index = kdtree.query_ball_point(_p, maxDistance)
@@ -115,9 +124,9 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0, 
     if len(distances) == 0:
       distance = maxDensity
     else:
-      n = np.maximum(0,np.log(distances*(growth-1)/density[index]+1)/np.log(growth))
+      n = np.maximum(0,np.log(distances*(growth[index]-1)/density[index]+1)/np.log(growth[index]))
       # print(n)
-      dd = density[index] * np.power(growth, n)
+      dd = density[index] * np.power(growth[index], n)
       distance = np.min(dd)
     
     
@@ -132,6 +141,7 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0, 
   p = linestring.interpolate(length)
   segments = [p]
   end=[]
+  if progress:t=tqdm(total=int(linestring.length),position=1)
   while (length+minDensity<= linestring.length):
     pl=np.array(p)
     distancel = getDistance(pl)
@@ -150,7 +160,9 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0, 
     # print(distance)
     p = linestring.interpolate(length)
     segments.append(p)
-
+    
+    if progress:t.update(int(distance))
+  if progress:t.close()
 
   # Smooth out the end
   # Get last point, get density, smooth out using points within maxDistance
@@ -211,10 +223,40 @@ def dresample_Polygon(polygon,*args, **kwargs):
   ------ 
   TODO
   """   
+  progress=False
+  temp=kwargs
+  if 'progress' in kwargs:
+    progress=kwargs['progress']
+    del temp['progress']
+    # kwargs['progress']=False
+  
+  density = args[0]
+  
+  
+  _density = dsimplify_Point(density,**temp)
+  points = _density[:, [0, 1]]
+  kdtree = spatial.cKDTree(points)
+  kwargs['_density']=_density
+  kwargs['kdtree']=kdtree
+    
+  if progress:t=tqdm(total=len(polygon.interiors)+1,position=0)
   exterior = Polygon(dresample_LineString(polygon.exterior,*args, **kwargs))
-  interiors = [Polygon(dresample_LineString(interior,*args, **kwargs)) for interior in polygon.interiors]
-  interiors = cascaded_union(interiors)
-  return exterior.difference(interiors)  
+  if progress:t.update(1)
+  interiors=[]
+  for interior in polygon.interiors:
+    _r = dresample_LineString(interior,*args, **kwargs)
+    
+    if len(_r.coords)<4 or not _r.is_ring:continue
+    newinterior = Polygon(_r)
+    if not newinterior.is_empty:
+      _n= newinterior.exterior
+      coords = _n.coords[::-1] if not _n.is_ccw else _n.coords
+      interiors.append(coords)
+    if progress:t.update(1)
+  if progress:t.close()
+  
+  # raise Exception("asd")
+  return Polygon(exterior.exterior,interiors)
 
 
 def resampleNear(linestring,feature,minDensity=1.0):

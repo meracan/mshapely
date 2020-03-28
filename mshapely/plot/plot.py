@@ -35,31 +35,42 @@ def plotPoints(points,type='o',axe=None,colors=None):
   canvas = plt if axe is None else axe
   canvas.scatter(xy[:,0], xy[:,1], c=colors,label=colors,alpha=0.75)
   # canvas.plot(xy[:,0],xy[:,1], type)
+
+def plotPolygons(polygons,*args,**kwargs):
+  xy=polygons.xy
+  xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
+  ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
   
-def plotPolygon(polygon,type='-',axe=None,style="plot",color=None):
-  # style="plot","fill"
+  
+  axe=kwargs.get("axe",None)
   canvas = plt if axe is None else axe
-  # xy=polygon.xy[:,-2:]
-  # # xy=np.round(xy,1)
-  # print(xy)
+  # if axe is not None:
+  canvas.set_xlim(xmin, xmax)
+  canvas.set_ylim(ymin, ymax)
   
+  for polygon in polygons:
+    polygon.plot(setLimits=False,*args,**kwargs)
+  
+def plotPolygon(polygon,type='-',axe=None,style="plot",color=None,setLimits=True):
+  canvas = plt if axe is None else axe
   path = pathify(polygon)
-  
   patch = PathPatch(path, facecolor=color, edgecolor='black')
 
   # Centering
-  # xy=polygon.xy
-  # xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
-  # ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
-  # canvas.set_xlim(-100, 100)
-  # canvas.set_ylim(-100, 100)
-  # canvas.add_patch(patch)
+  if setLimits:
+    xy=polygon.xy
+    xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
+    ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
+    canvas.set_xlim(xmin, xmax)
+    canvas.set_ylim(ymin, ymax)
   
-  xy=polygon.exterior.xy
-  canvas.plot(xy[:,0],xy[:,1],type)
-  for interior in polygon.interiors:
-    xy=interior.xy
-    canvas.plot(xy[:,0],xy[:,1],type)
+  canvas.add_patch(patch)
+  
+  # xy=polygon.exterior.xy
+  # canvas.plot(xy[:,0],xy[:,1],type)
+  # for interior in polygon.interiors:
+  #   xy=interior.xy
+  #   canvas.plot(xy[:,0],xy[:,1],type)
   
 
 def plotLineString(linestring,type='-',axe=None,):

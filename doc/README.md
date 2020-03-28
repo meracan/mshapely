@@ -398,3 +398,30 @@ Examples
 ```python
 PYTHONPATH=../mshapely/ python3 doc/doc_mshapely.py
 ```
+
+##
+```
+obj = {
+      "name":"example1", # Required
+      "format":"slf", # Required
+      "localFolder":"../data/example1",
+      "minDensity":10,
+      "maxDensity":10000, # 
+      "shorelineGrowth":1.2, # Shorelfine default growth
+      "simplification":{"isimplify":10,"buffer":1000,"fsimplify":10}, # Default coastline simplication
+      "defaultDomain":{"center":[-63.553987,44.627934],"radius":60,"density":10,"growth":1.2}, # Optional, radius is in km
+      
+      "input":{
+        "osm":"../data/water-polygons-split-4326.zip", # Optional, it downloads the file if not specified
+        "sosm":"../data/simplified-water-polygons-split-3857.zip",# Optional, it downloads the file if not specified
+        # "domain":"../data/example1/domain.geojson",# Optional, it uses defaultDomain if not specified 
+        # "density":"../data/example1/density.geojson",# Optional, it uses defaultDomain.center if not specified
+        
+        
+        # "globalbathymetry":"", # Optional, it downloasds the file if not specified
+        
+        # "bathymetry":"",# Optional
+        # "roughess":"",# Optional
+      },
+    }
+```

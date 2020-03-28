@@ -8,7 +8,7 @@ from shapely import affinity
 from shapely.geometry import Point, LineString, Polygon, \
   MultiPoint, MultiLineString, MultiPolygon,GeometryCollection
 
-from shapely.ops import cascaded_union
+from shapely.ops import cascaded_union,transform
 from shapely import speedups
 
 from .misc import add_attribute,add_method
@@ -16,13 +16,15 @@ from .misc import add_attribute,add_method
 from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,\
   multilinestring2numpy,multipolygon2numpy
 
+from .io import createGEO,createMSH
+
 # from .transformation import pieSectors
 
 from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Point,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
 
 
-from .plot import plotPoints,plotLineString,plotPolygon,plotSave
+from .plot import plotPoints,plotLineString,plotPolygon,plotPolygons,plotSave
 
 speedups.enable()
 
@@ -36,6 +38,8 @@ class MultiDensity(MultiPoint):
   def xya(self):
     return numpy.column_stack((xy_(self),self.att))  
 
+import warnings
+
 
 
 @add_method([GeometryCollection,Polygon,MultiPolygon])
@@ -47,6 +51,8 @@ def toShape(self):
     if len(self)==1:return LineString(self[0])
     return MultiLineString(self)
   elif isinstance(self[0],Polygon):
+    
+    # warnings.warn("Commented below for gmsh")
     if len(self)==1:return Polygon(self[0])
     return MultiPolygon(self)
   elif isinstance(self[0],MultiPoint):
@@ -138,16 +144,21 @@ def write(self, *args, **kwargs):
   writeGeometry(self, *args, **kwargs)
   return self
 
-# TODO MultiDensity to Geometry
 
 #
-# Write to files
+# Delete geometry based on filepath
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
 def delete(self, *args, **kwargs):
   deleteGeometry(*args, **kwargs)
   return self
 
+#
+# Project
+#
+@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+def proj(self, project):
+  return transform(project,self)
 
 #
 # Resample
@@ -333,6 +344,29 @@ def union(self,*args,**kwargs):
 
 
 #
+# Create Gmsh
+#
+@add_method(GeometryCollection)
+def msh(self,*args,**kwargs):
+  return self.toShape().gmsh(*args,**kwargs)
+
+
+@add_method([Point,MultiPoint,LineString,MultiLineString])
+def msh(self,*args,**kwargs):
+  return self
+  
+@add_method(Polygon)
+def msh(self,path,density,*args,**kwargs):
+  geo = createGEO(self,path,density,*args,**kwargs)
+  return createMSH(geo,path)
+
+@add_method(MultiPolygon)
+def msh(self,*args,**kwargs):
+  geo=self.largest()
+  geo.msh(*args,**kwargs)
+  return geo
+
+#
 # Simplify Density
 #
 @add_method(GeometryCollection)
@@ -413,8 +447,7 @@ def plot(self,*args,**kwargs):
 
 @add_method(MultiPolygon)
 def plot(self,*args,**kwargs):
-  for polygon in self:
-    polygon.plot(*args,**kwargs)
+  plotPolygons(self,*args,**kwargs)
   return self
 
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])

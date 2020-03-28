@@ -72,7 +72,7 @@ def _ll2numpy(l):
   length = max(map(len, l))
   return np.asarray([li+[li[0]]*(length-len(li)) for li in l],dtype=np.int)
 
-def dsimplify_Point(points,minDensity=1.0, maxDensity=10.0,growth=1.2,*args,**kwargs):
+def dsimplify_Point(points,minDensity=1.0, maxDensity=10.0,*args,**kwargs):
   """
   Simplify/remove points by respecting minimum density field.
   
@@ -84,8 +84,6 @@ def dsimplify_Point(points,minDensity=1.0, maxDensity=10.0,growth=1.2,*args,**kw
     default=1.0
   maxDensity: 
     default=10.0
-  growth: 
-    default=1.2
   
   Note
   ----
@@ -100,17 +98,19 @@ def dsimplify_Point(points,minDensity=1.0, maxDensity=10.0,growth=1.2,*args,**kw
   temppoints=np.array([])
   
   i=1
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
+  growths=points[:,3]
+  mingrowth=np.min(growths)
+  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
   # while(len(temppoints)!=len(newpoints)):
   while(i<=n):
     temppoints=newpoints
-    tempDensity = np.minimum(minDensity*np.power(growth,i),maxDensity)
-    newpoints=_dsimplify_Point(temppoints,minDensity=minDensity,maxDensity=tempDensity,growth=growth,*args,**kwargs)
+    tempDensity = np.minimum(minDensity*np.power(mingrowth,i),maxDensity)
+    newpoints=_dsimplify_Point(temppoints,minDensity=minDensity,maxDensity=tempDensity,mingrowth=mingrowth,*args,**kwargs)
     i=i+1
     
   return newpoints 
 
-def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, growth=1.2,balanced_tree=True):
+def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, mingrowth=1.2,balanced_tree=True):
   """
   The algorithm to simplify/remove points by respecting minimum density field.
   See dsimplify_Point for more information
@@ -120,12 +120,13 @@ def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, growth=1.2,balanced
   
   xy = points[:, [0, 1]]
   density = points[:, 2]
+  growth = points[:, 3]
   npoints = xy.shape[0]
   
   kdtree = spatial.cKDTree(xy,balanced_tree=balanced_tree)
   
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
-  maxDistance = (minDensity*np.power(growth,n+1)-minDensity)/(growth-1)
+  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
+  maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
   
   keepindices=np.zeros(npoints,dtype=np.int)
   for x in range(0,npoints,nvalue):
@@ -137,8 +138,8 @@ def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, growth=1.2,balanced
     l=_ll2numpy(l) 
     
     distances = np.linalg.norm(xy[l] - subpoints[:,None], axis=2)
-    nn=np.log(distances*(growth-1)/density[l]+1)/np.log(growth)
-    dd = density[l]*np.power(growth, nn)
+    nn=np.log(distances*(growth[l]-1)/density[l]+1)/np.log(growth[l])
+    dd = density[l]*np.power(growth[l], nn)
     
     ii=np.argmin(dd,axis=1)
     iii=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1))
@@ -161,7 +162,8 @@ def cArea(d):
   """
   return np.pi*np.power(d*0.5,2.)
     
-def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.01):
+
+def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,mingrowth=1.2,limitFineDensity=1000,fine=None,coarse=None):
   """
   Simplify polygons and remove points by respecting minimum density field.
   It mainly uses the buffer/unbuffer techniques for different density area/zone.
@@ -187,7 +189,7 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   
   
   
-  points = dsimplify_Point(points,minDensity=1,maxDensity=10,growth=1.2)
+  points = dsimplify_Point(points,minDensity=1,maxDensity=10)
   
   xy = points[:, [0, 1]]
   density = points[:, 2]
@@ -202,26 +204,31 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   maxDensity=np.minimum(maxDensity,polygon.length*0.1)
   
   
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(growth)-1),1)
-  maxDistance = (minDensity*np.power(growth,n+1)-minDensity)/(growth-1)
+  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
+  maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
   
-  polygon =polygon
-  opolygon=polygon
+  polygon=polygon.buffer(0)
+  if fine:fine=fine.buffer(0)
+  if coarse:coarse=coarse.buffer(0)
   
+  fpolygon=polygon if fine is None else fine
+  cpolygon=polygon if coarse is None else coarse
   def getZones(tpolygon,d):
     ozones=[]
     zones=[]
     for unique in udensity:
       mps=MultiPoint(xy[density==unique]).buffer(d)
-      _n=np.floor(np.log(d*(growth-1)/unique+1)/np.log(growth))
-      _d = np.maximum(minDensity,unique*np.power(growth,_n))
-
-      ozone=tpolygon.intersection(mps)
-      zone=ozone.buffer(-_d*0.2).buffer(_d*0.2).removeHoles(cArea(_d*0.1)).simplify(_d*0.01)
+      _n=np.floor(np.log(d*(mingrowth-1)/unique+1)/np.log(mingrowth))
+      _d = np.maximum(minDensity,unique*np.power(mingrowth,_n))
+      ozone=mps.intersection(tpolygon)
+      # print(len(tpolygon))
+      # raise Exception("kk")
+      zone=ozone.buffer(-_d*0.1).buffer(_d*0.1).removeHoles(cArea(_d*0.1)).simplify(_d*0.01)
       
-      ozones.append(zone.getExterior().union(mps.buffer(-_d*0.2)))
-      # ozones.append(mps)
-      zones.append(zone)
+      if not zone.is_empty:
+        ozones.append(zone.getExterior().union(mps.buffer(-_d*0.1)))
+      #  ozones.append(mps)
+        zones.append(zone)
     
     ozones=cascaded_union(ozones)
     zones=cascaded_union(zones)
@@ -256,10 +263,18 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   _dd=None
   t=tqdm(total=len(steps), unit_scale=True)
   for i,d in enumerate(steps):
-    if(i%8==0):
-      _nn=np.floor(np.log(d*(growth-1)/minDensity+1)/np.log(growth))
-      _dd = np.maximum(minDensity,minDensity*np.power(growth,_nn))
-      opolygon=opolygon.simplify(_dd*0.01)
+    # if(i%8==0):
+    _nn=np.floor(np.log(d*(mingrowth-1)/minDensity+1)/np.log(mingrowth))
+    _dd = np.maximum(minDensity,minDensity*np.power(mingrowth,_nn))
+    
+    # opolygon=opolygon.simplify(_dd*0.01)
+    if(_dd>limitFineDensity):
+      print("here")
+      coarse=coarse.simplify(_dd*0.01).buffer(0)
+      opolygon=coarse
+    else:
+      fine=fine.simplify(_dd*0.01).buffer(0)
+      opolygon=fine
     ndomain,prev=process(opolygon,ndomain,prev,d)
     # ndomain.plot()
     t.update(1)
@@ -267,19 +282,24 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,growth=1.2,cB=0.
   
   # prev.plot("o-")
   # ndomain.plot("o-")
-  t=tqdm(total=1, unit_scale=True)  
-  outline=polygon.simplify(_dd*0.1)
-  outline=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1)
-  if not outline.is_empty:
-    outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01)
+  
+  
+  # t=tqdm(total=1, unit_scale=True)  
+  # # outline=coarse.simplify(_dd*0.1)
+  
+  # outline=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1)
+  # if not outline.is_empty:
+    # outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01)
     
-    ndomain,prev=process(None,ndomain,prev,maxDistance,outline)
-  t.update(1);t.close()  
+  ndomain,prev=process(None,ndomain,prev,maxDistance,polygon)
+  # t.update(1);t.close()  
+  
+  
+  
   # ndomain.plot("o-")
   
   
   return ndomain
-
 
 
 def DotProduct(A,B):
