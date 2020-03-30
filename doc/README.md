@@ -1,19 +1,61 @@
-# Introduction
+# Documentation
+MShapely is a [Shapely](https://shapely.readthedocs.io/en/latest/manual.html) wrapper to enhance shapely functionalities and to manipulate spatial data for Marine Energy Resource Assessment Canada.
 
-#### Chain approach
+It provides extra functionality such as complex resampling, simplification, nearest nodes, etc. MShapely was mainly developed to help the development of complex 2-dimensional meshes for free-surface hydrodynamic models in coastal regions.
 
-#### General Attributes and Methods
+(Todo) add image here
 
+
+#### Chaining Method
+MShapely and Shapely smartly employs a technique called chain syntax.
+By “chaining” methods together with periods, you can perform several actions in a single line of code. 
+It means is that when you call a method on an object, it performs the method and returns an object. 
+Since the method on an object returns an object, another method can be called without having to explicitly reference an object again. 
+
+Here's an example:
+```python
+from shapely.geometry import Point
+import mshapely
+
+# Non-chaining method
+point = Point((0,0))
+circle = point.buffer(1)
+
+# Chaining method
+circle = Point((0,0)).buffer(1)
+```
+
+### Density Field Documentation
+[Docs](doc/density.md)
+
+### User-guide and Examples
+New attributes and methods are applied for all geometric objects (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection).
+However, some of the methods are not applicable (i.e point.resample()) and returns the original object. 
+Most of the methods returns a geometric object with a few exception (i.e. object.inearest()) - check "output" in the method description.
 
 #### object.np
 ```
-  Returns numpy array of the object. 
-  The array contains coordinates(xy) and parent ids.
+  Returns numpy array of the object.
+  It returns coordinates,(and ids for line and polygon)
+  XY coordinates are always place last.
+
+  Note
+  ----
+  x:x-coordinate
+  y:y-coordinate
+  lid: line id
+  pid: polygon id
+  cid: collection id
   
   Output
   ------ 
-  ndarray: 2D array. 
-   shape: Varies depending on the object and parameters. 
+  ndarray: 2D array
+   shape: Point, (npoint,2) : [[x,y]] 
+          LineString, (npoint,3) : [[lid,x,y]]
+          Polygon, (npoint,4) : [[pid,lid,x,y]]
+          MultiPoint, (npoint,3) : [[x,y]]
+          MultiLineString, (npoint,4) : [[cid,lid,x,y]]
+          MultiPolygon, (npoint,5) : [[cid,pid,lid,x,y]]
 ```
 Examples
 ```python
@@ -32,10 +74,10 @@ Examples
  [0. 0. 0. 0.]]
 
 >>> MultiPoint([[0,0],[1,0],[2,0],[0,0]]).np
-[[0. 0. 0.]
- [1. 1. 0.]
- [2. 2. 0.]
- [3. 0. 0.]]
+[[0. 0.]
+ [1. 0.]
+ [2. 0.]
+ [0. 0.]]
  
 >>> MultiLineString([[[0,0],[1,0]],[[2,0],[3,0]]]).np
 [[0. 0. 0. 0.]
@@ -53,11 +95,11 @@ Examples
 
 #### object.xy
 ```
-  Returns the xy coordinates of the object.
+  Returns numpy array of the object xy coordinates.
   Output
   ------ 
-  ndarray: 2D array. 
-   shape:(npoint,2)
+  ndarray: 2D array
+   shape:(npoint,2) : [[x,y]] 
 ```
 Examples
 ```python
@@ -94,23 +136,27 @@ Examples
  [0. 0.]]
 ```
 
-
 #### object._np([,isNorm,onPoint])
 ```
-  Returns the numpy array of the object with special requirements.
+  Returns object numpy array with normal vector information.
+  Only applicable for LineString, Polygon, MultiLineString, MultiPolygon
+  
   Parameters
   ----------
   isNorm: bool,optional
     If True, returns normal vectors information
   onPoint: bool,optional
-    If True,computes normal vectors from point.
-    If False, computer normal vector from segment
+    If True,computes normal vectors on point.
+    If False, computer normal vector from segment.
     Default is True.
   
   Output
   ------ 
-  ndarray: 2D array. 
-   shape: Varies depending on the object and parameters. 
+  ndarray: 2D array
+   shape: LineString, (npoint,7) : [[lid,xo,yo,xn,yn,x,y]]
+          Polygon, (npoint,4) : [[pid,lid,xo,yo,xn,yn,x,y]]
+          MultiLineString, (npoint,4) : [[cid,lid,xo,yo,xn,yn,x,y]]
+          MultiPolygon, (npoint,5) : [[cid,pid,lid,xo,yo,xn,yn,x,y]]
 ```
 
 Examples
@@ -131,28 +177,26 @@ Examples
  [ 2.   1.   0.   0.   1.   2.   0. ]]
 
 ```
-#### object.write(path[,schema,properties,type])
+#### object.write(path[,schema,properties])
 ```
   """
-  Write to file
+  Write geometry object to file (geojson or shapefile).
   
   Parameters
   ----------
   path: str
   schema: dict,optional
    Schema is used for shapefiles. 
-   Creates on automatically unless specified.
+   Creates it automatically unless specified.
   properties: list,optional
    Length must be equal to length of the object.
-  type: enum, optional
-   "shp","geojson". Default is "geojson"
   """
 ```
 Examples
 ```python
 >>> path_p_geo="test_io.point.geojson"
 >>> path_p_shp="test_io.point.shp"
->>> Point((0,0)).write(path_p_geo,type="geojson").write(path_p_shp,type="shp")
+>>> Point((0,0)).write(path_p_geo).write(path_p_shp)
 ```
 #### object.delete(path) or mshapely.io.delete(path)
 ```
@@ -171,10 +215,38 @@ Examples
 >>> Point((0,0)).write(path_p_shp,type="shp").delete(path_p_shp)
 ```
 
-#### object.resample(maxLength)
+#### object.densityField(properties[,minDensity=None,maxDensity=None,growth=None])
+```
+  Creates a Density Field object. This is used to resample (Multi)LineString and (Multi)Polygon based on a density field.
+  Takes xy coordinates from geometry object.
+  Needs properties: density and growth.
+  
+  Parameters
+  ----------
+  properties: list
+    Requires a list of dict containing density and growth, {"density","growth"}
+    The length of list must be equal to the length of xy.
+  minDensity: float,
+    Default minDensity of the field. If None, it takes minimum value of array-density
+  maxDensity: float,
+    Default maxDensity of the field. If None, it takes maximum value of array-density
+  growth:float,
+    Default growth of the field. If None,it will take minimum value of array-growth
+  Output
+  -----
+  DensityField
+```
+Examples
+```python
+>>> path_p_shp="test_io.point.shp"
+>>> Point((0,0)).write(path_p_shp,type="shp").delete(path_p_shp)
+```
+
+#### object.resample([,maxLength])
 ```
   Resample object using equal segment length. 
-  The segment is automatically calculated using the maxLength or smaller segment.
+  The segment is automatically calculated using the length of the LineString and maxLength parameter.
+  The segment is equal or smaller than the maxLength.
   
   Parameters
   ----------
@@ -183,11 +255,15 @@ Examples
 ```
 Examples
 ```python
+>>> LineString([(0,0),(10,0)])
 >>> LineString([(0,0),(10,0)]).resample()
-LINESTRING (0 0, 1 0, 2 0, 3 0, 4 0, 5 0, 6 0, 7 0, 8 0, 9 0, 10 0)
+>>> Polygon([(0, 0), (0, 10),(10,10),(10,0),(0,0)])
+>>> Polygon([(0, 0), (0, 10),(10,10),(10,0),(0,0)]).resample()
 ```
+[![resample.1](img/resample.1.png)](img/resample.1.png)
 
-#### object.dresample(density[,mp,minDensity,maxDensity,growth])
+
+#### object.dresample(density[,mp])
 ```
   Resample object using a 2D density growth field. 
   The length of the segments are automatically calculated based on the density growth field.
@@ -195,20 +271,10 @@ LINESTRING (0 0, 1 0, 2 0, 3 0, 4 0, 5 0, 6 0, 7 0, 8 0, 9 0, 10 0)
   
   Parameters
   ----------
-  density: ndarray
-   shape:(n,3)
-       n:n density points
-       3:x,y,density
+  density: Density Field object
   mp:MultiPoint,optional
    MultiPoint are part of the resampling. 
    An error will raise if the distance between points are smaller than minDensity.
-  minDensity:float,optional
-    Smallest segment length. Default is 1.0.
-  maxDensity:float,optional
-    Largest segment length. Default is 10.0.
-  growth:float,optional
-    Density growth factor. Default is 1.2.
-    
 ```
 Examples
 ```python
@@ -266,36 +332,8 @@ Examples
 ````
 [![largest.1](img/largest.1.png)](img/largest.1.png)
 
-#### mshapely.MultiDensity.dsimplify([,minDensity=1,maxDensity=10,growth=1.2])
-#### mshapely.dsimplify_Point(density[,minDensity=1,maxDensity=10,growth=1.2])
-```
-  Simplify object from remove and simplifying shape by respecting the density growth field.
-  For Polygon, it mainly uses the buffer/unbuffer techniques for different density area/zone.
-  
-  Parameters
-  ----------
- density: ndarray
-   shape:(n,3)
-       n:n density points
-       3:x,y,density
-  minDensity:float,optional
-    Smallest segment length. Default is 1.0.
-  maxDensity:float,optional
-    Largest segment length. Default is 10.0.
-  growth:float,optional
-    Density growth factor. Default is 1.2.
-```
-Examples
-```python
->>> mshapely.MultiDensity([[0,0,1],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]).dsimplify()
-[[ 0.  0.  1.]
- [20.  0.  2.]
- [30.  0.  1.]]
->>> mshapely.dsimplify_Point(np.array([[0,0,1.],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]))
-[[ 0.  0.  1.]
- [20.  0.  2.]
- [30.  0.  1.]]
-````
+
+#### mshapely.dsimplify(density)
 
 ```python
 >>> holes = [
@@ -355,18 +393,7 @@ Examples
 >>> density=polygon.inearest(maxDistance=100,angle=90)
 ````
 [![inearest.1](img/inearest.1.png)](img/inearest.1.png)
-#### object.correct()
-```
-  Correct geometric object using the buffer functionality
-  
-  Note
-  ----
-  The constant mshapely.CB is used.
-```
-Examples
-```python
 
-````
 #### object.plot()
 ```
   Plot geometry object in matplotlib
@@ -393,35 +420,8 @@ Examples
 ```python
 ````
 
-### Creating user guide
+## Creating user guide
 
 ```python
 PYTHONPATH=../mshapely/ python3 doc/doc_mshapely.py
-```
-
-##
-```
-obj = {
-      "name":"example1", # Required
-      "format":"slf", # Required
-      "localFolder":"../data/example1",
-      "minDensity":10,
-      "maxDensity":10000, # 
-      "shorelineGrowth":1.2, # Shorelfine default growth
-      "simplification":{"isimplify":10,"buffer":1000,"fsimplify":10}, # Default coastline simplication
-      "defaultDomain":{"center":[-63.553987,44.627934],"radius":60,"density":10,"growth":1.2}, # Optional, radius is in km
-      
-      "input":{
-        "osm":"../data/water-polygons-split-4326.zip", # Optional, it downloads the file if not specified
-        "sosm":"../data/simplified-water-polygons-split-3857.zip",# Optional, it downloads the file if not specified
-        # "domain":"../data/example1/domain.geojson",# Optional, it uses defaultDomain if not specified 
-        # "density":"../data/example1/density.geojson",# Optional, it uses defaultDomain.center if not specified
-        
-        
-        # "globalbathymetry":"", # Optional, it downloasds the file if not specified
-        
-        # "bathymetry":"",# Optional
-        # "roughess":"",# Optional
-      },
-    }
 ```

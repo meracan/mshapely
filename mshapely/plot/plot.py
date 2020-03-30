@@ -33,7 +33,7 @@ def pathify(polygon):
 def plotPoints(points,type='o',axe=None,colors=None):
   xy=points.xy
   canvas = plt if axe is None else axe
-  canvas.scatter(xy[:,0], xy[:,1], c=colors,label=colors,alpha=0.75)
+  canvas.scatter(xy[:,0], xy[:,1], c=colors,alpha=0.75)
   # canvas.plot(xy[:,0],xy[:,1], type)
 
 def plotPolygons(polygons,*args,**kwargs):
@@ -51,20 +51,23 @@ def plotPolygons(polygons,*args,**kwargs):
   for polygon in polygons:
     polygon.plot(setLimits=False,*args,**kwargs)
   
-def plotPolygon(polygon,type='-',axe=None,style="plot",color=None,setLimits=True):
+def plotPolygon(polygon,type='o',axe=None,style="plot",color=None,setLimits=True):
   canvas = plt if axe is None else axe
   path = pathify(polygon)
-  patch = PathPatch(path, facecolor=color, edgecolor='black')
+  patch = PathPatch(path, facecolor=color, edgecolor='black',zorder=0)
 
   # Centering
   if setLimits:
     xy=polygon.xy
     xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
     ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
-    canvas.set_xlim(xmin, xmax)
-    canvas.set_ylim(ymin, ymax)
+    canvas.set_xlim(xmin-1, xmax+1)
+    canvas.set_ylim(ymin-1, ymax+1)
   
   canvas.add_patch(patch)
+  if type=="o":
+    canvas.scatter(xy[:,0], xy[:,1], c="black",alpha=0.75,zorder=1)
+    
   
   # xy=polygon.exterior.xy
   # canvas.plot(xy[:,0],xy[:,1],type)

@@ -6,6 +6,7 @@ from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 
 from .spatial import dsimplify_Point
+from .density import DF
 
 def resample_LineString(linestring, maxLength=1.0):
   """
@@ -104,18 +105,16 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
   
   
   if(linestring.length<minDensity*np.power(mingrowth,0)):return linestring
-  if(maxDensity<minDensity*np.power(mingrowth,2)):
-    maxDensity=minDensity*np.power(mingrowth,2)
-  
+  if(maxDensity<DF.getD_n(minDensity,mingrowth,2)):
+    maxDensity=DF.getD_n(minDensity,mingrowth,2)
   
   density[density<minDensity]=minDensity
   density[density>maxDensity]=maxDensity
   if kdtree is None:
     kdtree = spatial.cKDTree(points)
     
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
-  maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
   
+  maxDistance=DF.getl_D(minDensity,mingrowth,maxDensity)
   def getDistance(_p):
     index = kdtree.query_ball_point(_p, maxDistance)
     pts = points[index]
@@ -124,12 +123,8 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
     if len(distances) == 0:
       distance = maxDensity
     else:
-      n = np.maximum(0,np.log(distances*(growth[index]-1)/density[index]+1)/np.log(growth[index]))
-      # print(n)
-      dd = density[index] * np.power(growth[index], n)
+      dd=DF.getD_l(density[index],growth[index],distances)
       distance = np.min(dd)
-    
-    
     return np.minimum(distance,maxDensity)
   
   flip=False

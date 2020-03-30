@@ -8,10 +8,10 @@ from mshapely.io import readGeometry,writeGeometry
 from mshapely.io import point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,multilinestring2numpy,multipolygon2numpy
 
 def test_tofile():
-  path_p_geo="../data/test_io.point.geojson"
-  path_p_shp="../data/test_io.point.shp"
-  path_pol_geo="../data/test_io.polygon.geojson"
-  path_pol_shp="../data/test_io.polygon.shp"
+  path_p_geo="./data/test_io.point.geojson"
+  path_p_shp="./data/test_io.point.shp"
+  path_pol_geo="./data/test_io.polygon.geojson"
+  path_pol_shp="./data/test_io.polygon.shp"
   
   point = Point((0,0))
   

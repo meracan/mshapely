@@ -6,34 +6,57 @@ package:
   version: "{{ version }}"
 
 source:
-  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
-  sha256: "8a18b4ea89d8820c5d0c7da8a64b2c324b4dabb695804dbfea19b9be9d88c0cc"
+  # url: "https://github.com/meracan/mshapely/archive/{{version}}.tar.gz"
+  path: ./
 
 build:
   noarch: python
   number: 0
-  script: "{{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv "
+  script: "{{ PYTHON }} setup.py install --single-version-externally-managed --record=record.txt"
+
+extra:
+  channels:
+    - meracan
+    - conda-forge
 
 requirements:
   host:
     - pip
     - python
   run:
-    - python
+    - python 
+    - numpy #1.18.1
+    - scipy #
+    - fiona 1.8.4
+    - shapely # 1.6.4
+    - pyproj # 1.9.6
+    - requests 
+    - gdal # 2.3.3
+    - geojson
+    - tqdm 
+    - matplotlib 
+    - libnetcdf 4.6.2
+    - poppler 0.65
 
 test:
   imports:
-    - click
-
+    - mshapely
+  # source_files:
+  #   - tests/test_ludo.py
+  #   - tests/runTest.py
+  # requires:
+  #   - pytest
+  # commands:
+  #   - pytest tests/
 about:
-  home: "https://palletsprojects.com/p/click/"
-  license: "BSD"
-  license_family: "BSD"
-  license_file: ""
-  summary: "Composable command line interface toolkit"
-  doc_url: ""
-  dev_url: ""
+  home: "https://github.com/meracan/mshapely"
+  license: "MIT"
+  license_family: "MIT"
+  license_file: "LICENSE"
+  summary: "A shapely wrapper to manipulate spatial data for Marine Energy Resource Assessment Canada"
+  doc_url: "https://github.com/meracan/mshapely/README.md"
+  dev_url: "https://github.com/meracan/mshapely/doc/README.md"
 
 extra:
   recipe-maintainers:
-    - your-github-id-here
+    - julien.cousineau

@@ -98,18 +98,17 @@ def multipoint2numpy(s):
   
   Output
   ------ 
-  ndarray(2D),[id,x,y]
+  ndarray(2D),[x,y]
   
   Example
   ------ 
   TODO
   
   """  
-  multi = np.concatenate([point2numpy(p) for p in s])
-  return np.column_stack((np.arange(len(multi)), multi))
+  return np.concatenate([point2numpy(p) for p in s])
 
 
-def multilinestring2numpy(s):
+def multilinestring2numpy(s, *args, **kwargs):
   """
   Converts shapely MultiLineString to numpy array
   
@@ -129,7 +128,7 @@ def multilinestring2numpy(s):
 
   multi = []
   for i, p in enumerate(s):
-    temp = linestring2numpy(p)
+    temp = linestring2numpy(p, *args, **kwargs)
     n = len(temp)
     id = np.zeros(n) + i
     temp = np.column_stack((id, temp))
@@ -138,7 +137,7 @@ def multilinestring2numpy(s):
   return np.concatenate(multi)
 
 
-def multipolygon2numpy(s):
+def multipolygon2numpy(s, *args, **kwargs):
   """
   Converts shapely MultiPolygon to numpy array
   
@@ -158,7 +157,7 @@ def multipolygon2numpy(s):
   
   multi = []
   for i, p in enumerate(s):
-    temp = polygon2numpy(p)
+    temp = polygon2numpy(p, *args, **kwargs)
     n = len(temp)
     id = np.zeros(n) + i
     temp = np.column_stack((id, temp))

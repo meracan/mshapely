@@ -5,7 +5,7 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 from ..linalg import norm,rotate
-
+from .density import DF
 
 def removeHoles_Polygon(polygon, area=1.0):
   """
@@ -202,27 +202,21 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,mingrowth=1.2,li
   # steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4],dtype=np.float32)
   steps=steps[steps<polygon.length]
   maxDensity=np.minimum(maxDensity,polygon.length*0.1)
-  
-  
-  n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
-  maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
+  maxDistance = DF.getl_D(minDensity,mingrowth,maxDensity)
   
   polygon=polygon.buffer(0)
   if fine:fine=fine.buffer(0)
   if coarse:coarse=coarse.buffer(0)
   
-  fpolygon=polygon if fine is None else fine
-  cpolygon=polygon if coarse is None else coarse
   def getZones(tpolygon,d):
     ozones=[]
     zones=[]
     for unique in udensity:
       mps=MultiPoint(xy[density==unique]).buffer(d)
-      _n=np.floor(np.log(d*(mingrowth-1)/unique+1)/np.log(mingrowth))
-      _d = np.maximum(minDensity,unique*np.power(mingrowth,_n))
+      _d = DF.getD_l(unique,mingrowth,d)
+      _d = np.maximum(minDensity,_d) 
       ozone=mps.intersection(tpolygon)
-      # print(len(tpolygon))
-      # raise Exception("kk")
+      
       zone=ozone.buffer(-_d*0.1).buffer(_d*0.1).removeHoles(cArea(_d*0.1)).simplify(_d*0.01)
       
       if not zone.is_empty:
@@ -263,13 +257,8 @@ def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,mingrowth=1.2,li
   _dd=None
   t=tqdm(total=len(steps), unit_scale=True)
   for i,d in enumerate(steps):
-    # if(i%8==0):
-    _nn=np.floor(np.log(d*(mingrowth-1)/minDensity+1)/np.log(mingrowth))
-    _dd = np.maximum(minDensity,minDensity*np.power(mingrowth,_nn))
-    
-    # opolygon=opolygon.simplify(_dd*0.01)
+    _dd=DF.getD_l(minDensity,mingrowth,d)
     if(_dd>limitFineDensity):
-      print("here")
       coarse=coarse.simplify(_dd*0.01).buffer(0)
       opolygon=coarse
     else:
