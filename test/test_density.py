@@ -2,6 +2,7 @@
 import pytest
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 import mshapely
@@ -29,6 +30,14 @@ def test_ll2numpy():
   None
 
 def test_plot():
+  
+  density=np.array([[0,0,1,1.2],[2.5,0,10,1.2],[5,0,1,1.05]])
+  
+  fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+  fig.tight_layout()
+  df=DF(density,minDensity=1,maxDensity=100,minGrowth=1.2)
+  df.plot(extent=[-10,-10,10,10],axe=axes,fig=fig).plotSave("doc/img/density.1.png")
+  
   None
 
 def test_simplify():
@@ -36,8 +45,8 @@ def test_simplify():
 
 if __name__ == "__main__":
   test_DF_static()
-  test_ll2numpy()
+  # test_ll2numpy()
   test_plot()
-  test_simplify()
+  # test_simplify()
 
 
