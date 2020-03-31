@@ -59,6 +59,10 @@ class DF(object):
   minGrowth:float,
     Default growth of the field. If None,it will take minimum value of array-growth
   
+  Attributes
+  ----------
+  dp: ndarray,
+    shape:(npoints,5),[[x,y,density,growth,groupId,pointId]]
   """
   def __init__(self,array,minDensity=None,maxDensity=None,minGrowth=None,balanced_tree=True,nvalue=1000):
     if not isinstance(array,(np.ndarray,list)):raise Exception("Needs 2D array")
@@ -83,6 +87,10 @@ class DF(object):
     ----------
     array: 2D ndarray : [[x,y,density,growth]] 
     
+    Note
+    ----------
+    It creates groupId and pointId in the 4,5 position.
+    
     """
     npoint = len(array)
     groupId=len(np.unique(self.dp))
@@ -106,7 +114,7 @@ class DF(object):
     
     Output
     ------
-    ndarray : [[x,y,density,growth,groupId,id]]
+    ndarray : [[x,y,density,growth,groupId,pointId]]
       groupId: Group id of the set of points.
       id: Point id of the group
     
@@ -121,9 +129,8 @@ class DF(object):
 
     newpoints=points
     
-    i=1
-    growths=points[:,3]
     n = DF.getn_D(minDensity,minGrowth,maxDensity)
+    i=1
     while(i<=n):
       keepindices = self.getDensity(newpoints[:,:2],DF.getD_n(minDensity,minGrowth,i),newpoints,return_index=True)
       uniques=np.unique(keepindices)
@@ -143,35 +150,34 @@ class DF(object):
       dp=Density points,[[x,y,density,growth]]
       dd=Density for every (sub)target point and density points
     """
-    minDensity=self.minDensity
-    minGrowth=self.minGrowth
-    nvalue=self.nvalue
-    maxDensity=self.maxDensity if maxDensity is None else maxDensity
-    kdtree=self.kdtree if dp is None else spatial.cKDTree(dp[:,:2],balanced_tree=self.balanced_tree)
-    dp=self.dp if dp is None else dp
+    minDensity = self.minDensity
+    minGrowth  = self.minGrowth
+    nvalue     = self.nvalue
+    maxDensity = self.maxDensity if maxDensity is None else maxDensity
+    kdtree     = self.kdtree if dp is None else spatial.cKDTree(dp[:,:2],balanced_tree=self.balanced_tree)
+    dp         = self.dp if dp is None else dp
     
     maxDistance = DF.getl_D(minDensity,minGrowth,maxDensity)
     
-    xy = dp[:,:2]
+    xy      = dp[:,:2]
     density = dp[:,2]
-    growth = dp[:,3]
+    growth  = dp[:,3]
     
     ntp=len(tp)
     results=np.zeros(ntp)
     for x in range(0,ntp,nvalue):
-      xn = np.minimum(ntp,x+nvalue)
-      array = np.arange(x,xn)
-      atp = tp[array]
-    
-      l = kdtree.query_ball_point(atp,maxDistance)
-      l=_ll2numpy(l) 
+      xn        = np.minimum(ntp,x+nvalue)
+      array     = np.arange(x,xn)
+      atp       = tp[array]
+      l         = _ll2numpy(kdtree.query_ball_point(atp,maxDistance))
       distances = np.linalg.norm(xy[l] - atp[:,None], axis=2)
-      dd = DF.getD_l(density[l],growth[l],distances)
+      dd        = DF.getD_l(density[l],growth[l],distances)
       if return_index:
         ii=np.argmin(dd,axis=1)
-        results[x:xn]=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1))
+        results[x:xn]=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1)) # Taking index (from min density) from l 
       else:
         results[x:xn]=np.min(dd,axis=1)
+    
     if return_index:return results.astype(int)
     return results
     
@@ -184,28 +190,14 @@ class DF(object):
     if extent is None:extent=self.extent
     xmin,ymin,xmax,ymax=extent
     
-    points = self.dp
-    xy=points[:,:2]
-    density=points[:,2]
-    growth=points[:,3]
-    kdtree = self.kdtree
-    maxDistance = DF.getl_D(self.minDensity,self.minGrowth,self.maxDensity)
-    
     
     x = np.linspace(xmin, xmax, nx)
     y = np.linspace(ymin, ymax, nx)
     xx, yy = np.meshgrid(x, y)
     pp = np.column_stack((xx.flatten(),yy.flatten()))
     
-    l = kdtree.query_ball_point(pp,maxDistance)
-    l=_ll2numpy(l) 
-    distances = np.linalg.norm(xy[l] - pp[:,None], axis=2)
-    dd = DF.getD_l(density[l],growth[l],distances)
-    z=np.min(dd,axis=1)
+    z=self.getDensity(pp).reshape((len(x),len(y)))
     
-    # print(z[z<1.0])
-    
-    z=z.reshape((len(x),len(y)))
     canvas = plt if axe is None else axe
     canvas.axis('equal')
   
