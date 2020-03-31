@@ -47,7 +47,8 @@ To calculate the length or distance from density point to density field location
 [![getl_n_sum](img/getl_n_sum.png)](img/getl_n_sum.png)
 
 To simplify, the sum can be converted to closed form:\
-[![getclosedform](img/getclosedform.png)](img/getclosedform.png) or [![getl_n](img/getl_n.png)](img/getl_n.png)
+[![getclosedform](img/getclosedform.png)](img/getclosedform.png)\
+[![getl_n](img/getl_n.png)](img/getl_n.png)
 
 If n is unknown and l is known:\
 [![getn_l](img/getn_l.png)](img/getn_l.png)
@@ -144,3 +145,4 @@ Example
 >>> df.add([[5,5,1,1.2]]).plot(extent=[-10,-10,10,10],axe=axes[1][1],fig=fig,showDP=True)
 >>> df.plotSave("doc/img/density.1.png")
 ```
+[![density.2](img/density.2.png)](img/density.2.png)

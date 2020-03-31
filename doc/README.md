@@ -263,7 +263,7 @@ Examples
 [![resample.1](img/resample.1.png)](img/resample.1.png)
 
 
-#### object.dresample(density[,mp])
+#### object.dresample(df[,mp])
 ```
   Resample object using a 2D density growth field. 
   The length of the segments are automatically calculated based on the density growth field.
@@ -333,7 +333,7 @@ Examples
 [![largest.1](img/largest.1.png)](img/largest.1.png)
 
 
-#### mshapely.dsimplify(density)
+#### mshapely.dsimplify(df)
 
 ```python
 >>> holes = [
