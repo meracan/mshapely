@@ -39,8 +39,7 @@ def check(function):
 
 class DF(object):
   """
-  Density Field Object. 
-  Calculates the density based on density growth points.
+  Density Field Object.
   
   This object is used to resample (Multi)LineString and (Multi)Polygon based on a density field.
   
@@ -51,57 +50,74 @@ class DF(object):
       x:x-coordinate
       y:y-coordinate
       density:density value
-      growth:growth factor
+      growth:growth value
   minDensity: float,
     Default minDensity of the field. If None, it takes minimum value of array-density
   maxDensity: float,
     Default maxDensity of the field. If None, it takes maximum value of array-density
   minGrowth:float,
     Default growth of the field. If None,it will take minimum value of array-growth
-  
+  balanced_tree:bool
+    balanced_tree is a kdtree parameter
+  nvalue:int
+    Number of points search in the kdtree. Higher memory is required for higher point number. 
   Attributes
   ----------
   dp: ndarray,
-    shape:(npoints,5),[[x,y,density,growth,groupId,pointId]]
+    shape:(npoints,6),[[x,y,density,growth,groupId,pointId]]
   """
-  def __init__(self,array,minDensity=None,maxDensity=None,minGrowth=None,balanced_tree=True,nvalue=1000):
-    if not isinstance(array,(np.ndarray,list)):raise Exception("Needs 2D array")
-    if isinstance(array,list):array=np.array(array)
-    if array.ndim !=2:raise Exception("Needs 2D array")
-    
-    self.minDensity = np.min(array[:,2]) if minDensity is None else minDensity
-    self.maxDensity = np.max(array[:,2]) if maxDensity is None else maxDensity
-    self.minGrowth = np.min(array[:,3]) if minGrowth is None else minGrowth
+  def __init__(self,array,balanced_tree=True,nvalue=1000,**kwargs):
+    self.minDensity=None
+    self.maxDensity=None
+    self.minGrowth=None
+    self.dp=None
     self.balanced_tree=balanced_tree
     self.nvalue =nvalue
     
-    npoint = len(array)
-    array = np.column_stack((array,np.zeros(npoint),np.arange(npoint)))
-    self._simplify(array)
-
-  def add(self,array):
+    self.add(array,**kwargs)
+  
+  def _checkInput(self,array):
+    """
+    """
+    if not isinstance(array,(np.ndarray,list)):raise Exception("Needs 2D array")
+    if isinstance(array,list):array=np.array(array)
+    if array.ndim !=2:raise Exception("Needs 2D array")
+    return array
+    
+  def add(self,array,minDensity=None,maxDensity=None,minGrowth=None):
     """
     Add points to the density field
     
     Parameters
     ----------
-    array: 2D ndarray : [[x,y,density,growth]] 
+    array: 2D ndarray : [[x,y,density,growth]]
     
     Note
     ----------
-    It creates groupId and pointId in the 4,5 position.
-    
+    It creates groupId and pointId automatically
+    The field parameter minDensity,maxDensity and minGrowth are defined when DF is created.
     """
+    
+    array=self._checkInput(array)
+    
+    if self.minDensity is None:
+      self.minDensity = np.min(array[:,2]) if minDensity is None else minDensity
+    if self.maxDensity is None:
+      self.maxDensity = np.max(array[:,2]) if maxDensity is None else maxDensity
+    if self.minGrowth is None:
+      self.minGrowth = np.min(array[:,3]) if minGrowth is None else minGrowth
+    
+    
+    groupId=len(np.unique(self.dp)) if self.dp is not None else 0
     npoint = len(array)
-    groupId=len(np.unique(self.dp))
     array = np.column_stack((array,np.ones(npoint)*groupId,np.arange(npoint)))
-    array=np.concatenate((self.dp,array))
+    array=np.concatenate((self.dp,array)) if self.dp is not None else array
     self._simplify(array)
     return self
   
   def _simplify(self,points):
     """
-    Simplify/remove points by respecting minimum density growth field.
+    Simplify/remove uninfluential density points
     
     Parameters
     ----------
@@ -110,17 +126,7 @@ class DF(object):
     Note
     ----
     The algorithm uses a stepping approach by gradually increasing the growth n value and gradually removing points.
-    This avoids searching large quantities of unnecessary points.
-    
-    Output
-    ------
-    ndarray : [[x,y,density,growth,groupId,pointId]]
-      groupId: Group id of the set of points.
-      id: Point id of the group
-    
-    Example
-    ------ 
-    TODO
+    This avoids searching large quantities of uninfluential points.
     """ 
     minDensity=self.minDensity
     minGrowth=self.minGrowth
@@ -144,10 +150,19 @@ class DF(object):
   
   def getDensity(self,tp,maxDensity=None,dp=None,return_index=False):
     """
+    Get field density
+    Parameters
+    ----------
+    tp:2D ndarray : [[x,y]]
+      Target points
+    maxDensity:float
+      This is mainly used during simplication. It limits the search instead of self.maxDensity
+    dp:2D ndarray : [[x,y,density,growth,groupId,pointId]]
+      Density points. This is mainly used during simplication and used instead of self.dp.
+    return_index:
+      This is mainly used during simplication. It returns the index instead of values.
     Note
     ----
-      tp=Target points,[[x,y]]
-      dp=Density points,[[x,y,density,growth]]
       dd=Density for every (sub)target point and density points
     """
     minDensity = self.minDensity
@@ -163,9 +178,14 @@ class DF(object):
     density = dp[:,2]
     growth  = dp[:,3]
     
+    tp=self._checkInput(tp)
+    
+    
     ntp=len(tp)
+    
     results=np.zeros(ntp)
     for x in range(0,ntp,nvalue):
+      
       xn        = np.minimum(ntp,x+nvalue)
       array     = np.arange(x,xn)
       atp       = tp[array]
@@ -183,10 +203,25 @@ class DF(object):
     
   @property
   def extent(self):
+    """
+    Extent of the density field using the density points self.dp
+    """
     return [np.min(self.dp[:,0]),np.min(self.dp[:,1]),np.max(self.dp[:,0]),np.max(self.dp[:,1])]
     
-  def plot(self,extent=None,nx=100,axe=None,fig=None):
-    
+  def plot(self,extent=None,nx=100,axe=None,fig=None,showDP=False):
+    """
+    Plot the densityField
+    Parameters
+    ----------
+    extent:1D ndarray : [minx,miny,maxx,maxy]
+      Extent array. If not specified, it will automatically compute the extent based on density points
+    nx:float
+      Resolution of the density field in the plot.
+    axe:matplotlib axe
+    fig:matplotlib fig
+    showDP:bool
+      Plot density points 
+    """
     if extent is None:extent=self.extent
     xmin,ymin,xmax,ymax=extent
     
@@ -203,9 +238,16 @@ class DF(object):
   
     h = canvas.contourf(x,y,z)
     fig.colorbar(h, ax=canvas, shrink=0.9)
+    
+    if showDP:
+      canvas.scatter(self.dp[:,0], self.dp[:,1], c="black",alpha=0.75,zorder=1)
+    
     return self
 
   def plotSave(self,name='plot.png',axe=None):
+    """
+    Save plot to file
+    """
     plt.savefig(name)
     canvas = plt if axe is None else axe
     canvas.clf()    

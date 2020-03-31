@@ -26,7 +26,7 @@ circle = Point((0,0)).buffer(1)
 ```
 
 ### Density Field Documentation
-[Docs](doc/density.md)
+[Docs](density.md)
 
 ### User-guide and Examples
 New attributes and methods are applied for all geometric objects (Point, LineString, Polygon, MultiPoint, MultiLineString, MultiPolygon, GeometryCollection).

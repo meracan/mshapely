@@ -11,6 +11,8 @@ from shapely.geometry import Point, LineString, Polygon, \
 from shapely.ops import cascaded_union,transform
 from shapely import speedups
 
+from .spatial import DF
+
 from .misc import add_attribute,add_method
 
 from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,\

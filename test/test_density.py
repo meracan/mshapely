@@ -4,7 +4,6 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 
-
 import mshapely
 from mshapely.spatial import DF
 
@@ -29,24 +28,20 @@ def test_DF_static():
 def test_ll2numpy():
   None
 
-def test_plot():
-  
-  density=np.array([[0,0,1,1.2],[2.5,0,10,1.2],[5,0,1,1.05]])
-  
-  fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-  fig.tight_layout()
-  df=DF(density,minDensity=1,maxDensity=100,minGrowth=1.2)
-  df.plot(extent=[-10,-10,10,10],axe=axes,fig=fig).plotSave("doc/img/density.1.png")
-  
-  None
-
 def test_simplify():
-  None
+  density=np.array([[0,0,1,1.2],[2.5,0,10,1.2],[5,0,1,1.05]])
+  df=DF(density,minDensity=1,maxDensity=100,minGrowth=1.2)
+  np.testing.assert_array_equal(df.dp,[[0,0,1,1.2,0,0],[5,0,1,1.05,0,2]])
+  
+def test_getDensity():
+  density=np.array([[0,0,1,1.2],[2.5,0,10,1.2],[5,0,1,1.2]])
+  df=DF(density,minDensity=1,maxDensity=100,minGrowth=1.2)
+  np.testing.assert_array_equal(df.getDensity([[2.2,0]]),[1.2])
+  
 
 if __name__ == "__main__":
   test_DF_static()
-  # test_ll2numpy()
-  test_plot()
-  # test_simplify()
-
+  test_simplify()
+  test_getDensity()
+  
 
