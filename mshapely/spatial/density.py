@@ -1,40 +1,21 @@
 import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
-
-def _ll2numpy(l):
-  """
-  Converts kdtree list of lits to numpy array
-  
-  Parameters
-  ----------
-  l:list[list[int]] 
-    List of lists of integers
-  
-  Note
-  ----
-  List of lists can have different array shape.
-  Thus, the maximum array shape is taken (length) and fills for smaller arrays with its first value (li[0]).
-  
-  Example
-  ------ 
-  TODO
-  """  
-  length = max(map(len, l))
-  return np.asarray([li+[li[0]]*(length-len(li)) for li in l],dtype=np.int)
-
+from shapely.geometry import Point,GeometryCollection
+from ..io import readGeometry
+from ..misc import ll2numpy
 
 def check(function):
   """
   Decorator for static methods to check input
   """
-  def wrapper(d,g,a):
+  def wrapper(d,g,a,*args):
     if not isinstance(d,np.ndarray):d=np.array(d)
     if not isinstance(g,np.ndarray):g=np.array(g)
     if not isinstance(a,np.ndarray):a=np.array(a)
     if np.any(g<=1):raise Exception("Growth needs to be larger than 1.0")
     
-    return function(d,g,a)
+    return function(d,g,a,*args)
   return wrapper
 
 class DF(object):
@@ -82,6 +63,7 @@ class DF(object):
     if not isinstance(array,(np.ndarray,list)):raise Exception("Needs 2D array")
     if isinstance(array,list):array=np.array(array)
     if array.ndim !=2:raise Exception("Needs 2D array")
+    
     return array
     
   def add(self,array,minDensity=None,maxDensity=None,minGrowth=None):
@@ -101,17 +83,23 @@ class DF(object):
     array=self._checkInput(array)
     
     if self.minDensity is None:
-      self.minDensity = np.min(array[:,2]) if minDensity is None else minDensity
+      self.minDensity= np.min(array[:,2]) if minDensity is None else minDensity
     if self.maxDensity is None:
-      self.maxDensity = np.max(array[:,2]) if maxDensity is None else maxDensity
+      self.maxDensity= np.max(array[:,2]) if maxDensity is None else maxDensity
     if self.minGrowth is None:
       self.minGrowth = np.min(array[:,3]) if minGrowth is None else minGrowth
     
+    minDensity=self.minDensity
+    maxDensity=self.maxDensity
+    
+    array[array[:,2]<minDensity,2]=minDensity
+    array[array[:,2]>maxDensity,2]=maxDensity
     
     groupId=len(np.unique(self.dp)) if self.dp is not None else 0
     npoint = len(array)
     array = np.column_stack((array,np.ones(npoint)*groupId,np.arange(npoint)))
     array=np.concatenate((self.dp,array)) if self.dp is not None else array
+    
     self._simplify(array)
     return self
   
@@ -132,10 +120,15 @@ class DF(object):
     minGrowth=self.minGrowth
     maxDensity=self.maxDensity
     balanced_tree = self.balanced_tree
-
+    
     newpoints=points
     
+    # Remove duplicates to a meter
+    v,i=np.unique(np.round(newpoints[:,:2],0),return_index=True,axis=0)
+    newpoints=newpoints[i]
+    
     n = DF.getn_D(minDensity,minGrowth,maxDensity)
+    
     i=1
     while(i<=n):
       keepindices = self.getDensity(newpoints[:,:2],DF.getD_n(minDensity,minGrowth,i),newpoints,return_index=True)
@@ -180,7 +173,6 @@ class DF(object):
     
     tp=self._checkInput(tp)
     
-    
     ntp=len(tp)
     
     results=np.zeros(ntp)
@@ -189,17 +181,46 @@ class DF(object):
       xn        = np.minimum(ntp,x+nvalue)
       array     = np.arange(x,xn)
       atp       = tp[array]
-      l         = _ll2numpy(kdtree.query_ball_point(atp,maxDistance))
-      distances = np.linalg.norm(xy[l] - atp[:,None], axis=2)
-      dd        = DF.getD_l(density[l],growth[l],distances)
-      if return_index:
-        ii=np.argmin(dd,axis=1)
-        results[x:xn]=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1)) # Taking index (from min density) from l 
+      l,e         = ll2numpy(kdtree.query_ball_point(atp,maxDistance))
+      if l.shape[1]!=0:
+        distances = np.linalg.norm(xy[l] - atp[:,None], axis=2)
+        dd        = DF.getD_l(density[l],growth[l],distances)
+        dd[e]     = maxDensity
+  
+        if return_index:
+          ii=np.argmin(dd,axis=1)
+          results[x:xn]=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1)) # Taking index (from min density) from l 
+        else:
+          dd[dd>maxDensity]=maxDensity
+          results[x:xn]=np.min(dd,axis=1)
       else:
-        results[x:xn]=np.min(dd,axis=1)
+        if return_index:raise Exception("Not coded for this condition")
+        results[x:xn]=maxDensity
     
     if return_index:return results.astype(int)
     return results
+  
+  @staticmethod
+  def read(path):
+    collection = readGeometry(path)
+    schema=collection['schema']
+    points=collection['geometry']
+    minDensity=schema.get('minDensity',None)
+    maxDensity=schema.get('maxDensity',None)
+    minGrowth=schema.get('minGrowth',None)
+    
+    density = list(map(lambda x:[x['density'],x['growth']],collection['properties']))
+    xy=points.xy
+    dp=np.column_stack((xy,density))
+    
+    return DF(dp,minDensity=minDensity,maxDensity=maxDensity,minGrowth=minGrowth)
+  
+  def write(self,path):
+    dp = self.dp
+    mp=GeometryCollection(list(map(Point,dp[:,:2])))
+    schema={"minDensity":self.minDensity,"maxDensity":self.maxDensity,"minGrowth":self.minGrowth}
+    mp.write(path,properties=map(lambda x:{"density":x[0],"growth":x[1]},dp[:,[2,3]]),schema=schema)
+    return self
     
   @property
   def extent(self):
@@ -224,10 +245,11 @@ class DF(object):
     """
     if extent is None:extent=self.extent
     xmin,ymin,xmax,ymax=extent
+    xpad=(xmax-xmin)*0.05
+    ypad=(ymax-ymin)*0.05
     
-    
-    x = np.linspace(xmin, xmax, nx)
-    y = np.linspace(ymin, ymax, nx)
+    x = np.linspace(xmin-xpad, xmax+xpad, nx)
+    y = np.linspace(ymin-ypad, ymax+ypad, nx)
     xx, yy = np.meshgrid(x, y)
     pp = np.column_stack((xx.flatten(),yy.flatten()))
     
@@ -279,14 +301,15 @@ class DF(object):
   
   @staticmethod
   @check
-  def getn_l(d,g,l):
-    n=np.array(np.log(l*(g-1)/d+1)/np.log(g)-1)
+  def getn_l(d,g,l,skip=True):
+    if skip:n=np.array(np.log(l*(g-1)/d+1)/np.log(g))
+    else:n=np.array(np.log(l*(g-1)/d+1)/np.log(g)-1)
     n[n<0.]=0.
     return n
     
   @staticmethod
   @check
-  def getD_l(d,g,l):
-    n = DF.getn_l(d,g,l)
+  def getD_l(d,g,l,*args):
+    n = DF.getn_l(d,g,l,*args)
     return DF.getD_n(d,g,n)
     

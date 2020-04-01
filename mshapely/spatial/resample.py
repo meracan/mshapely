@@ -5,7 +5,6 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 
-from .spatial import dsimplify_Point
 from .density import DF
 
 def resample_LineString(linestring, maxLength=1.0):
@@ -52,7 +51,6 @@ def _resample_Polygon(linestring, maxLength=1.0):
   length = linestring.length / n
   segments = [Point(list(linestring.coords)[0])]
   for i in range(int(n) - 1):
-    
     p2 = linestring.interpolate(length * (i + 1))
     segments.append(p2)
   return LineString(segments)
@@ -76,59 +74,23 @@ def resample_Polygon(polygon, *args, **kwargs):
   return exterior.difference(interiors)
 
 
-def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,kdtree=None,_density=None,progress=False):
+def _dresample_LineString(linestring, df,progress=False):
   """ 
   Resample linestring based on density points
   
   Parameters
   ----------      
-  density : 2D array points [n,xyd]
-  minDensity: minimum density (default=1.0)
-  minDensity: minimum density (default=10.0)
-  mingrowth: mesh growth factor (default=1.2)
-  
-  Example
-  ------ 
-  TODO
+  df : Density field
   """
-  if(linestring.length<minDensity):warnings.warn("LineString is shorter than minDensity")
-  
-  
-  # TODO density and kdtree should be done outside
-  if _density is None:
-    _density = dsimplify_Point(density,minDensity=1,maxDensity=10)
-  
-  points = _density[:, [0, 1]]
-  density = _density[:, 2]
-  growth = _density[:, 3]
-  mingrowth=np.min(growth)
-  
-  
-  if(linestring.length<minDensity*np.power(mingrowth,0)):return linestring
-  if(maxDensity<DF.getD_n(minDensity,mingrowth,2)):
-    maxDensity=DF.getD_n(minDensity,mingrowth,2)
-  
-  density[density<minDensity]=minDensity
-  density[density>maxDensity]=maxDensity
-  if kdtree is None:
-    kdtree = spatial.cKDTree(points)
-    
-  
-  maxDistance=DF.getl_D(minDensity,mingrowth,maxDensity)
-  def getDistance(_p):
-    index = kdtree.query_ball_point(_p, maxDistance)
-    pts = points[index]
-    distances = np.linalg.norm(pts - _p, axis=1)
-    # print(distances)
-    if len(distances) == 0:
-      distance = maxDensity
-    else:
-      dd=DF.getD_l(density[index],growth[index],distances)
-      distance = np.min(dd)
-    return np.minimum(distance,maxDensity)
-  
+  minDensity=df.minDensity
+  maxDensity=df.maxDensity
+  minGrowth=df.minGrowth
+  if(linestring.length<df.minDensity):warnings.warn("LineString is shorter than minDensity")
+  if(linestring.length<minDensity):return linestring
+  maxDistance=DF.getl_D(minDensity,minGrowth,maxDensity)
+
   flip=False
-  if(getDistance(linestring.coords[-1])<getDistance(linestring.coords[0])):
+  if(df.getDensity([linestring.coords[-1]])<df.getDensity([linestring.coords[0]])):
     flip=True
     linestring=LineString(reversed(linestring.coords))
   
@@ -138,21 +100,19 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
   end=[]
   if progress:t=tqdm(total=int(linestring.length),position=1)
   while (length+minDensity<= linestring.length):
-    pl=np.array(p)
-    distancel = getDistance(pl)
+    pl=p
+    distancel = df.getDensity(pl.xy)
     tlength = length + distancel
     pr = linestring.interpolate(tlength)
-    distancer = getDistance(pr)
+    distancer = df.getDensity(pr.xy)
     
-    
-    distance =np.minimum(distancel,distancer)   
+    distance =np.minimum(distancel,distancer)[0]   
     
     # This array is saved to smooth out the end
     if(length+maxDistance>linestring.length):
       end.append(dict(distance=distance,length=length))
     
     length += distance
-    # print(distance)
     p = linestring.interpolate(length)
     segments.append(p)
     
@@ -164,7 +124,7 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
   # print(LineString(segments))
   extra = (length - linestring.length)
   n=len(end)
-  lp=getDistance(linestring.coords[-1])
+  lp=df.getDensity([linestring.coords[-1]])
   v = np.array([np.maximum(o['distance']-lp,0) for o in end])
   s = np.sum(v)
   
@@ -177,7 +137,9 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
   
   if(n!=0): # Special case when the segment is shorter than the minDensity
     segments = segments[:-n]
+    
     length = end[0]['length']
+    # print(end)
     for i,_u in enumerate(u):
       length +=end[i]['distance']-_u
       
@@ -193,13 +155,13 @@ def _dresample_LineString(linestring, density, minDensity=1.0, maxDensity=10.0,k
   if(flip):newlinestring=LineString(reversed(newlinestring.coords))
   return newlinestring
 
-def dresample_LineString(linestring,density,mp=None,*args, **kwargs):
+def dresample_LineString(linestring,df,mp=None,*args, **kwargs):
   
   if(mp is not None):
     segments = _split_line_with_multipoint(linestring,mp)
-    return linemerge([_dresample_LineString(s,density,*args, **kwargs) for s in segments])
+    return linemerge([_dresample_LineString(s,df,*args, **kwargs) for s in segments])
   else:
-    return _dresample_LineString(linestring,density,*args, **kwargs)
+    return _dresample_LineString(linestring,df,*args, **kwargs)
 
 
   
@@ -209,30 +171,14 @@ def dresample_Polygon(polygon,*args, **kwargs):
   
   Parameters
   ----------      
-  density : 2D array points [n,xyd]
-  minDensity: minimum density (default=1.0)
-  minDensity: minimum density (default=10.0)
-  growth: mesh growth factor (default=1.2)
-  
-  Example
-  ------ 
-  TODO
+  df : Density field
   """   
   progress=False
   temp=kwargs
   if 'progress' in kwargs:
     progress=kwargs['progress']
     del temp['progress']
-    # kwargs['progress']=False
   
-  density = args[0]
-  
-  
-  _density = dsimplify_Point(density,**temp)
-  points = _density[:, [0, 1]]
-  kdtree = spatial.cKDTree(points)
-  kwargs['_density']=_density
-  kwargs['kdtree']=kdtree
     
   if progress:t=tqdm(total=len(polygon.interiors)+1,position=0)
   exterior = Polygon(dresample_LineString(polygon.exterior,*args, **kwargs))
@@ -252,55 +198,6 @@ def dresample_Polygon(polygon,*args, **kwargs):
   
   # raise Exception("asd")
   return Polygon(exterior.exterior,interiors)
-
-
-def resampleNear(linestring,feature,minDensity=1.0):
-  """ 
-  Resample Polygon with density points
-  
-  Parameters
-  ----------      
-  density : 2D array points [n,xyd]
-  minDensity: minimum density (default=1.0)
-  minDensity: minimum density (default=10.0)
-  growth: mesh growth factor (default=1.2)
-  
-  Example
-  ------ 
-  TODO
-  """   
-  linestring=LineString(np.round(np.array(linestring.coords),12))
-  featurepts= feature.resample(minDensity).xy
-  splitters = []
-  for xy in featurepts:
-    p1,p2 = nearest_points(linestring, Point(xy))
-    splitters.append(p1)
-    # print(linemerge(_split_line_with_point(linestring, p1)))
-    
-  return linemerge(_split_line_with_multipoint(linestring,MultiPoint(splitters)))
-  # return _linemerge_with_multipoint(linestring,MultiPoint(splitters))
-
-def resampleNearPolygon(polygon, *args, **kwargs):
-  """ 
-  Resample Near for Polygon
-  
-  Parameters
-  ----------      
-  
-  
-  Example
-  ------ 
-  TODO
-  """   
-  
-  exterior = Polygon(resampleNear(polygon.exterior, *args, **kwargs))
-  interiors = [Polygon(resampleNear(interior, *args, **kwargs)) for interior in polygon.interiors]
-  interiors = cascaded_union(interiors)
-  return exterior.difference(interiors)
-
-
-
-
 
 def _split_line_with_point(line, splitter):
   """ 

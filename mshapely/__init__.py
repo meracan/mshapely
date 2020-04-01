@@ -21,7 +21,7 @@ from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring
 
 # from .transformation import pieSectors
 
-from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Point,dsimplify_Polygon,\
+from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
 
 

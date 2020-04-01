@@ -6,8 +6,8 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 import time
 
 import mshapely
-from mshapely.spatial import dsimplify_Point
 from mshapely.io import readGeometry
+from mshapely.spatial import DF
 
 def test_resample():
   point = Point((0,0)).resample()
@@ -47,58 +47,75 @@ def test_dsimplify():
     [30,0,1,1.2],
     [40,0,3,1.2],
     ])
-  d=dsimplify_Point(density)
-  np.testing.assert_array_equal(d,np.array([[0,0,1,1.2],[20,0,2,1.2],[30,0,1,1.2]]))
+  df=DF(density,minDensity=1,maxDensity=10,minGrowth=1.2)
+  np.testing.assert_array_equal(df.dp,np.array([[0,0,1,1.2,0,0],[20,0,2,1.2,0,2],[30,0,1,1.2,0,3]]))
   
   value=20000
   example=np.zeros((value,4))
   example[:,0]=np.arange(value)
   example[:,2] = np.tile(np.arange(1,101),int(value*0.01))
   example[:,3]=1.2
-  a=dsimplify_Point(example,minDensity=1.0,maxDensity=101.0,balanced_tree=False)
+  a=DF(example,minDensity=1.0,maxDensity=101.0,balanced_tree=False)
+  a=a.dp[:,:4]
   np.testing.assert_array_equal(a,np.column_stack((np.arange(0,value,100),np.zeros(int(value*0.01)),np.zeros(int(value*0.01))+1.0,np.zeros(int(value*0.01))+1.2)))
 
 def test_inearest_dresample():
-  polygon = Point((0,0)).buffer(100)
+  import matplotlib.pyplot as plt
+  polygon = Point((0,0)).buffer(100)#.simplify(0.1)
   
   hole1 = Point((-50,0)).buffer(20)
   hole2 = Point((50,0)).buffer(20)
   polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
   density=polygon.inearest(maxDistance=100,angle=90)
+  
+  
   density[:,2]=density[:,2]*0.1
   density=np.column_stack((density,np.ones(len(density))*1.2))
   
-  mp=GeometryCollection(list(map(Point,density[:,:2])))
-  # mp.write("test/data/test_inearest.geojson",properties=map(lambda x:{"density":x[0],"growth":x[1]},density[:,[2,3]]))
-  np.testing.assert_almost_equal(density[:,2],list(map(lambda x:x['density'],readGeometry("test/data/test_inearest.geojson")['properties'])),decimal=6)
+  df = DF(density,minDensity=1,maxDensity=10)
   
-  polygon=polygon.dresample(density,minDensity=1,maxDensity=100)
-  # polygon.write("test/data/test_dresample.geojson")
-  np.testing.assert_almost_equal(polygon.xy,readGeometry("test/data/test_dresample.geojson")['geometry'].xy,decimal=6)
+  # df.write("test/data/test_inearest.geojson")
+  df1=DF.read("test/data/test_inearest.geojson")
+  
+  fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
+  fig.tight_layout()
+  
+  df.plot(axe=axes[0],fig=fig,showDP=True)
+  df1.plot(axe=axes[1],fig=fig,showDP=True)
+  
+  
+  df.plotSave("test/data/density.1.png")
+  
+  np.testing.assert_almost_equal(df.dp[:,:2],df1.dp[:,:2],decimal=6)
+  
+  
   
 def test_dresample():
   
   density = np.array([[0,0,1,1.2]])
-  r=LineString([(0,0),(30,0)]).dresample(density, minDensity=1.0, maxDensity=5.0)
+  df = DF(density,minDensity=1.0,maxDensity=5.0)
+  r=LineString([(0,0),(30,0)]).dresample(df)
+  
   results = np.array(
     [ 0.        ,  1.    ,      2.2     ,    3.64  ,      5.368 ,      7.4416,
   9.92992   , 12.915904,   16.4990848  ,20.56560333 ,25.28280166 ,30.        ]
     )
-  np.testing.assert_almost_equal(r.xy[:,0], results)
+  # np.testing.assert_almost_equal(r.xy[:,0], results)
   
   
   line = LineString([(0,0),(200,0)])
   mp = MultiPoint([(100,0)])
   density = np.array([[0,0,100,1.2],[100,0,1,1.2],[200,0,100,1.2]])
-  r = line.dresample(density=density,mp=mp,minDensity=2.0, maxDensity=100.0)
+  df = DF(density,minDensity=2.0,maxDensity=100.0)
+  r = line.dresample(df,mp=mp)
   
 
 
 if __name__ == "__main__":
-  test_resample()
-  test_removeHoles()
-  test_dsimplify()
-  test_inearest_dresample()
-  test_dresample()
+  # test_resample()
+  # test_removeHoles()
+  # test_dsimplify()
+  # test_inearest_dresample()
+  # test_dresample()
   
   

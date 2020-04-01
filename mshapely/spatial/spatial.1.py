@@ -6,7 +6,6 @@ from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 from ..linalg import norm,rotate
 from .density import DF
-from ..misc import ll2numpy
 
 def removeHoles_Polygon(polygon, area=1.0):
   """
@@ -51,6 +50,107 @@ def remove_Polygons(polygons, area=1.0):
   if len(polygons)==1:return polygons[0]
   return MultiPolygon(polygons)
 
+
+def _ll2numpy(l):
+  """
+  Converts kdtree list of lits to numpy array
+  
+  Parameters
+  ----------
+  l:list[list[int]] 
+    List of lists of integers
+  
+  Note
+  ----
+  List of lists can have different array shape.
+  Thus, the maximum array shape is taken (length) and fills for smaller arrays with its first value (li[0]).
+  
+  Example
+  ------ 
+  TODO
+  """  
+  length = max(map(len, l))
+  return np.asarray([li+[li[0]]*(length-len(li)) for li in l],dtype=np.int)
+
+# def dsimplify_Point(points,minDensity=1.0, maxDensity=10.0,*args,**kwargs):
+#   """
+#   Simplify/remove points by respecting minimum density field.
+  
+#   Parameters
+#   ----------
+#   points:ndarray
+#     shape(npoint,3)
+#   minDensity: 
+#     default=1.0
+#   maxDensity: 
+#     default=10.0
+  
+#   Note
+#   ----
+#   The algorithm uses a stepping approach by gradually increasing the growth n value and gradually removing points.
+#   This avoids searching large quantities of unnecessary points.
+  
+#   Example
+#   ------ 
+#   TODO
+#   """  
+#   newpoints=points
+#   temppoints=np.array([])
+  
+#   i=1
+#   growths=points[:,3]
+#   mingrowth=np.min(growths)
+#   n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
+#   # while(len(temppoints)!=len(newpoints)):
+#   while(i<=n):
+#     temppoints=newpoints
+#     tempDensity = np.minimum(minDensity*np.power(mingrowth,i),maxDensity)
+#     newpoints=_dsimplify_Point(temppoints,minDensity=minDensity,maxDensity=tempDensity,mingrowth=mingrowth,*args,**kwargs)
+#     i=i+1
+    
+#   return newpoints 
+
+# def _dsimplify_Point(points,minDensity=1.0, maxDensity=10.0, mingrowth=1.2,balanced_tree=True):
+#   """
+#   The algorithm to simplify/remove points by respecting minimum density field.
+#   See dsimplify_Point for more information
+  
+#   """  
+#   nvalue=1000
+  
+#   xy = points[:, [0, 1]]
+#   density = points[:, 2]
+#   growth = points[:, 3]
+#   npoints = xy.shape[0]
+  
+#   kdtree = spatial.cKDTree(xy,balanced_tree=balanced_tree)
+  
+#   n= np.maximum(np.floor(np.log(maxDensity/minDensity)/np.log(mingrowth)-1),1)
+#   maxDistance = (minDensity*np.power(mingrowth,n+1)-minDensity)/(mingrowth-1)
+  
+#   keepindices=np.zeros(npoints,dtype=np.int)
+#   for x in range(0,npoints,nvalue):
+#     xn = np.minimum(npoints,x+nvalue)
+#     array = np.arange(x,xn)
+#     subpoints = xy[array]
+    
+#     l = kdtree.query_ball_point(subpoints,maxDistance)
+#     l=_ll2numpy(l) 
+    
+#     distances = np.linalg.norm(xy[l] - subpoints[:,None], axis=2)
+#     nn=np.log(distances*(growth[l]-1)/density[l]+1)/np.log(growth[l])
+#     dd = density[l]*np.power(growth[l], nn)
+    
+#     ii=np.argmin(dd,axis=1)
+#     iii=np.squeeze(np.take_along_axis(l,ii[:,None],axis=1))
+    
+#     keepindices[x:xn]=iii
+    
+#   # print(points[np.where(xy[:,1]<-4020000)[0],2])
+#   uniques=np.unique(keepindices)
+#   return points[uniques]
+
+
 def cArea(d):
   """
   Area of circle
@@ -63,7 +163,7 @@ def cArea(d):
   return np.pi*np.power(d*0.5,2.)
     
 
-def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
+def dsimplify_Polygon(polygon,points,minDensity=1,maxDensity=10,mingrowth=1.2,limitFineDensity=1000,fine=None,coarse=None):
   """
   Simplify polygons and remove points by respecting minimum density field.
   It mainly uses the buffer/unbuffer techniques for different density area/zone.
@@ -71,10 +171,13 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
   Parameters
   ----------
   polyon:Polygon
-  df:Density field
-  limitFineDensity:
-  fine:
-  coarse:
+  points:ndarray
+    shape(npoint,3)
+  minDensity:float
+  maxDensity:float
+  growth:float
+  cB:float
+    Correction buffer
   
   Notes
   -----
@@ -84,19 +187,22 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
     
   """
   
-  points = df.dp
+  
+  
+  points = dsimplify_Point(points,minDensity=1,maxDensity=10)
+  
   xy = points[:, [0, 1]]
   density = points[:, 2]
   udensity = np.unique(density)
   
+  
+  
+  
   steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
   # steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4],dtype=np.float32)
   steps=steps[steps<polygon.length]
-  minDensity = df.minDensity
-  maxDensity = df.maxDensity
-  minGrowth = df.minGrowth
   maxDensity=np.minimum(maxDensity,polygon.length*0.1)
-  maxDistance = DF.getl_D(minDensity,minGrowth,maxDensity)
+  maxDistance = DF.getl_D(minDensity,mingrowth,maxDensity)
   
   polygon=polygon.buffer(0)
   if fine:fine=fine.buffer(0)
@@ -107,7 +213,7 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
     zones=[]
     for unique in udensity:
       mps=MultiPoint(xy[density==unique]).buffer(d)
-      _d = DF.getD_l(unique,minGrowth,d)
+      _d = DF.getD_l(unique,mingrowth,d)
       _d = np.maximum(minDensity,_d) 
       ozone=mps.intersection(tpolygon)
       
@@ -151,7 +257,7 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
   _dd=None
   t=tqdm(total=len(steps), unit_scale=True)
   for i,d in enumerate(steps):
-    _dd=DF.getD_l(minDensity,minGrowth,d)
+    _dd=DF.getD_l(minDensity,mingrowth,d)
     if(_dd>limitFineDensity):
       coarse=coarse.simplify(_dd*0.01).buffer(0)
       opolygon=coarse
@@ -163,7 +269,24 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
     t.update(1)
   t.close()
   
+  # prev.plot("o-")
+  # ndomain.plot("o-")
+  
+  
+  # t=tqdm(total=1, unit_scale=True)  
+  # # outline=coarse.simplify(_dd*0.1)
+  
+  # outline=outline.buffer(-maxDensity*0.1).buffer(maxDensity*0.1)
+  # if not outline.is_empty:
+    # outline=outline.removeHoles(cArea(maxDensity*0.1)).simplify(maxDensity*0.01)
+    
   ndomain,prev=process(None,ndomain,prev,maxDistance,polygon)
+  # t.update(1);t.close()  
+  
+  
+  
+  # ndomain.plot("o-")
+  
   
   return ndomain
 
@@ -235,7 +358,7 @@ def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100):
     xn = np.minimum(npoints,x+nvalue)
     subpoints = points[x:xn]
     l = kdtree.query_ball_point(subpoints[:,-2:],maxDistance)
-    l,e=ll2numpy(l)
+    l=_ll2numpy(l)
     inearest[x:xn]=_inearest_Polygon(xy[l],subpoints,angle)
     t.update(xn-x)
   t.close()

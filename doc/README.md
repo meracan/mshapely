@@ -278,20 +278,20 @@ Examples
 ```
 Examples
 ```python
->>> LineString([(0,0),(30,0)]).dresample(np.array([[0,0,1]]), minDensity=1.0, maxDensity=5.0, growth=1.2)
+>>> LineString([(0,0),(30,0)]).dresample(mshapely.DF(np.array([[0,0,1,1.2]]), minDensity=1.0, maxDensity=5.0))
 ```
 [![dresample.1](img/dresample.1.png)](img/dresample.1.png)
 ```python
 >>> mp = MultiPoint([(100,0)])
->>> density = np.array([[0,0,100],[100,0,1],[200,0,100]])
->>> LineString([(0,0),(200,0)]).dresample(density=density,mp=mp,minDensity=2.0, maxDensity=100.0, growth=1.2)
+>>> density = np.array([[0,0,100,1.2],[100,0,1,1.2],[200,0,100,1.2]])
+>>> LineString([(0,0),(200,0)]).dresample(mshapely.DF(density,minDensity=2.0, maxDensity=100.0),mp=mp)
 ```
 [![dresample.2](img/dresample.2.png)](img/dresample.2.png)
 ```python
 >>> mp = MultiPoint([(0, 0), (0, 100),(100,100),(100,0)])
->>> density = np.array([[0,0,1],[100,100,1]])
->>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(density,minDensity=2.0, maxDensity=20.0, growth=1.2)
->>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(density,mp,minDensity=2.0, maxDensity=20.0, growth=1.2)
+>>> density = np.array([[0,0,1,1.2],[100,100,1,1.2]])
+>>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(mshapely.DF(density,minDensity=2.0,maxDensity=20.0))
+>>> Polygon([(0, 0), (0, 100),(100,100),(100,0),(0,0)]).dresample(mshapely.DF(density,minDensity=2.0,maxDensity=20.0),mp)
 ```
 [![dresample.3](img/dresample.3.png)](img/dresample.3.png)
 ```python
@@ -299,9 +299,9 @@ Examples
 >>> hole1 = Point((-50,0)).buffer(20)
 >>> hole2 = Point((50,0)).buffer(20)
 >>> polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
->>> density = np.array([[-100,0,5],[100,0,5]])
+>>> density = np.array([[-100,0,5,1.2],[100,0,5,1.2]])
 >>> mp = MultiPoint([(-100, 0), (0, 100),(0,100),(0,-100)])
->>> polygon.dresample(density,mp, minDensity=5.0, maxDensity=50.0, growth=1.2)
+>>> polygon.dresample(mshapely.DF(density,minDensity=2.0,maxDensity=50.0),mp)
 ```
 [![dresample.4](img/dresample.4.png)](img/dresample.4.png)
 
@@ -350,16 +350,14 @@ Examples
     ]
   
   
->>> polygon = Polygon(exterior,holes)
->>> polygon.plot("o-",axes[0][0])
->>> polygon.dsimplify(np.array([[0,0,1]]),minDensity=1,maxDensity=100).plot("o-",axes[0][1])
->>> polygon.dsimplify(np.array([[0,0,5]]),minDensity=5,maxDensity=100).plot("o-",axes[0][2])
->>> polygon.dsimplify(np.array([[0,0,10]]),minDensity=10,maxDensity=100).plot("o-",axes[1][0])
->>> polygon.dsimplify(np.array([[0,0,20]]),minDensity=20,maxDensity=100).plot("o-",axes[1][1])
->>> polygon.dsimplify(np.array([[0,0,100]]),minDensity=100,maxDensity=1000).plot("o-",axes[1][2])
->>> polygon.dsimplify(np.array([[0,0,5],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][0])
->>> polygon.dsimplify(np.array([[0,0,10],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][1])
->>> polygon.dsimplify(np.array([[0,0,20],[0,100,5]]),minDensity=5,maxDensity=100).plot("o-",axes[2][2])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,1,1.2]]),minDensity=1,maxDensity=100)).plot("o-",axes[0][1])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[0][2])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2]]),minDensity=10,maxDensity=100)).plot("o-",axes[1][0])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2]]),minDensity=20,maxDensity=100)).plot("o-",axes[1][1])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,100,1.2]]),minDensity=100,maxDensity=1000)).plot("o-",axes[1][2])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][0])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][1])
+>>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][2])
 ```
 [![dsimplify.1](img/dsimplify.1.png)](img/dsimplify.1.png)
 

@@ -1,4 +1,5 @@
 from functools import wraps
+import numpy as np
 
 def add_method(cls):
   def decorator(func):
@@ -38,11 +39,30 @@ def _add_monkey_attribute(self,name,func):
   return deco
 
 
-
-
-
-
-
-
-
-
+def ll2numpy(l):
+  """
+  Converts kdtree list of lits to numpy array
+  
+  Parameters
+  ----------
+  l:list[list[int]] 
+    List of lists of integers
+  
+  Note
+  ----
+  List of lists can have different array shape.
+  Thus, the maximum array shape is taken (length) and fills for smaller arrays with its first value (li[0]).
+  
+  Example
+  ------ 
+  TODO
+  """  
+  length = max(map(len, l))
+  
+  empty=np.array(list(map(len, l)))
+  empty= (empty==0)
+  
+  a=np.array([xi+[len(xi)>0 and xi[0] or 0]*(length-len(xi)) for xi in l])
+  
+  return a,empty
+  

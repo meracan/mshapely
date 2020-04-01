@@ -8,10 +8,10 @@ from mshapely.io import readGeometry,writeGeometry
 from mshapely.io import point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,multilinestring2numpy,multipolygon2numpy
 
 def test_tofile():
-  path_p_geo="./data/test_io.point.geojson"
-  path_p_shp="./data/test_io.point.shp"
-  path_pol_geo="./data/test_io.polygon.geojson"
-  path_pol_shp="./data/test_io.polygon.shp"
+  path_p_geo="./test/data/test_io.point.geojson"
+  path_p_shp="./test/data/test_io.point.shp"
+  path_pol_geo="./test/data/test_io.polygon.geojson"
+  path_pol_shp="./test/data/test_io.polygon.shp"
   
   point = Point((0,0))
   
@@ -55,7 +55,7 @@ def test_tonumpy():
     ]))
   
   np.testing.assert_array_equal(polygon.np, np.array([[0,0,0,0],[0,1,0,1],[0,2,1,1],[0,3,1,0],[0,0,0,0]]))
-  np.testing.assert_array_equal(mp.np, np.array([[0,0,0],[1,1,1],[2,1,2],[3,2,2]]))
+  np.testing.assert_array_equal(mp.np, np.array([[0,0],[1,1],[1,2],[2,2]]))
   
   np.testing.assert_array_equal(ml.np, np.array([
     [0,0,0,0],

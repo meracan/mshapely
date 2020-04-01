@@ -78,7 +78,9 @@ def writeGeoJSON(collection,output):
     features.append(Feature(geometry=geo, properties=property))
   
   with open(output, 'w') as f:
-    dump(FeatureCollection(features), f)
+    collection=FeatureCollection(features)
+    collection['schema']=schema
+    dump(collection, f)
  
 def readGeometry(path):
   if not os.path.isfile(path):
@@ -139,8 +141,10 @@ def readGeoJSON(geoPath):
   if not os.path.isfile(geoPath):
     sys.exit("File {0} does not exist".format(os.path.abspath(geoPath)))
   with open(geoPath) as f:
-    features = json.load(f)["features"]
+    collection=json.load(f)
+    schema = collection.get("schema",{})
+    features = collection["features"]
     geometry = GeometryCollection([shape(feature["geometry"]) for feature in features])
     properties = [feature['properties'] for feature in features]  # Save properties
-    return dict(schema=None, geometry=geometry, properties=properties)
+    return dict(schema=schema, geometry=geometry, properties=properties)
   
