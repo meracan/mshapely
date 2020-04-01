@@ -30,10 +30,13 @@ def pathify(polygon):
     return Path(vertices, codes)
 
 
-def plotPoints(points,type='o',axe=None,colors=None):
+def plotPoints(points,type='o',axe=None,colors=None,fig=None):
   xy=points.xy
+  
   canvas = plt if axe is None else axe
-  canvas.scatter(xy[:,0], xy[:,1], c=colors,alpha=0.75)
+  
+  h=canvas.scatter(xy[:,0], xy[:,1], c=colors,alpha=0.75)
+  fig.colorbar(h)
   # canvas.plot(xy[:,0],xy[:,1], type)
 
 def plotPolygons(polygons,*args,**kwargs):

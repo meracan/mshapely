@@ -17,25 +17,15 @@ from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring
   multilinestring2numpy,multipolygon2numpy
 
 
-# from .transformation import pieSectors
-
-from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Point,dsimplify_Polygon,\
+from .spatial import DF
+from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
-
 
 from .plot import plotPoints,plotLineString,plotPolygon,plotPolygons,plotSave
 
 speedups.enable()
 
-class MultiDensity(MultiPoint):
-  def __init__(self, value):
-    value=numpy.array(value)
-    xy=value[:,:2]
-    self.att = value[:,2:]
-    super().__init__(xy)
-  @property
-  def xya(self):
-    return numpy.column_stack((xy_(self),self.att))  
+
 
 import warnings
 
@@ -76,7 +66,7 @@ def to(self,*args,**kwargs):
   
   return self.toShape().to(*args,**kwargs)
 
-@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def to(self,instance):
   if isinstance(self,Polygon):
     if instance==Point:return GeometryCollection(list(map(Point,self.xy)))
@@ -92,7 +82,7 @@ def to(self,instance):
 def np(self):
   return self.toShape().np
   
-@add_attribute([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_attribute([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def np(self):
   return self._np()
 #
@@ -102,7 +92,7 @@ def np(self):
 def _np(self,*args,**kwargs):
   return point2numpy(self,*args,**kwargs)
 
-@add_method([MultiPoint,MultiDensity])
+@add_method([MultiPoint])
 def _np(self,*args,**kwargs):
   return multipoint2numpy(self,*args,**kwargs)
   
@@ -131,7 +121,7 @@ def xy_(feature):
   n=array.shape[1]
   return array[:,[n-2,n-1]]
 
-@add_attribute([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_attribute([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def xy(self):
   return xy_(self)
 
@@ -147,7 +137,7 @@ def write(self, *args, **kwargs):
 #
 # Delete geometry based on filepath
 #
-@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def delete(self, *args, **kwargs):
   deleteGeometry(*args, **kwargs)
   return self
@@ -155,7 +145,7 @@ def delete(self, *args, **kwargs):
 #
 # Project
 #
-@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def proj(self, project):
   return transform(project,self)
 
@@ -166,7 +156,7 @@ def proj(self, project):
 def resample(self, *args, **kwargs):
   return self.toShape().resample()
 
-@add_method([Point,MultiPoint,MultiDensity])
+@add_method([Point,MultiPoint])
 def resample(self, *args, **kwargs):
   return self
 
@@ -194,7 +184,7 @@ def resample(self, *args, **kwargs):
 def dresample(self, *args, **kwargs):
   return self.toShape().dresample(*args, **kwargs)
 
-@add_method([Point,MultiPoint,MultiDensity])
+@add_method([Point,MultiPoint])
 def dresample(self, *args, **kwargs):
   return self
 
@@ -246,7 +236,7 @@ def dresample(self, *args, **kwargs):
 def removeHoles(self, *args, **kwargs):
   return self.toShape().removeHoles(*args, **kwargs)
   
-@add_method([Point,MultiPoint,LineString,MultiLineString,MultiDensity])
+@add_method([Point,MultiPoint,LineString,MultiLineString])
 def removeHoles(self, *args, **kwargs):
   return self
 
@@ -264,7 +254,7 @@ def removeHoles(self, *args, **kwargs):
 def removePolygons(self, *args, **kwargs):
   return self.toShape().removePolygons(*args, **kwargs)
   
-@add_method([Point,MultiPoint,LineString,MultiLineString,MultiDensity,Polygon])
+@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon])
 def removePolygons(self, *args, **kwargs):
   return self
 
@@ -281,7 +271,7 @@ def removePolygons(self, *args, **kwargs):
 def largest(self):
   return self.toShape().largest()
   
-@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiDensity])
+@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon])
 def largest(self):
   return self
 
@@ -298,7 +288,7 @@ def largest(self):
 def correct(self,value):
   return self.toShape().correct(value)
 
-@add_method([Point,MultiPoint,LineString,MultiLineString,MultiDensity])
+@add_method([Point,MultiPoint,LineString,MultiLineString])
 def correct(self):
   return self
   
@@ -355,10 +345,7 @@ def dsimplify(self,*args,**kwargs):
 def dsimplify(self,*args,**kwargs):
   return self
 
-@add_method([MultiDensity])
-def dsimplify(self,*args,**kwargs):
-  return dsimplify_Point(self.xya,*args,**kwargs)
-  
+
 @add_method(Polygon)
 def dsimplify(self,*args,**kwargs):
   return dsimplify_Polygon(self,*args,**kwargs)
@@ -374,7 +361,7 @@ def dsimplify(self,*args,**kwargs):
 def inearest(self,*args,**kwargs):
   return self.toShape().inearest(*args,**kwargs)
 
-@add_method([Point,MultiPoint,LineString,MultiLineString,MultiDensity])
+@add_method([Point,MultiPoint,LineString,MultiLineString])
 def inearest(self):
   return self
   
@@ -401,7 +388,7 @@ def plot(self,*args,**kwargs):
   plotPoints(MultiPoint(self),*args,**kwargs)
   return self
 
-@add_method([MultiPoint,MultiDensity])
+@add_method([MultiPoint])
 def plot(self,*args,**kwargs):
   plotPoints(self,*args,**kwargs)
   return self
@@ -427,7 +414,7 @@ def plot(self,*args,**kwargs):
   plotPolygons(self,*args,**kwargs)
   return self
 
-@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon,MultiDensity])
+@add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def savePlot(self,*args,**kwargs):
   plotSave(*args,**kwargs)
   return self

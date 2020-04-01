@@ -100,7 +100,9 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
   
   polygon=polygon.buffer(0)
   if fine:fine=fine.buffer(0)
+  else:fine=polygon
   if coarse:coarse=coarse.buffer(0)
+  else:coarse=polygon
   
   def getZones(tpolygon,d):
     ozones=[]

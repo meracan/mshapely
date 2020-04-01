@@ -140,11 +140,6 @@ def doc_general():
   .savePlot("doc/img/largest.1.png")
   
 def doc_general2():
-  # print("")
-  # print(mshapely.MultiDensity([[0,0,1],[10,0,5],[20,0,2],[30,0,1],[40,0,3]]).dsimplify())
-  # print(mshapely.dsimplify_Point(np.array([[0,0,1.],[10,0,5],[20,0,2],[30,0,1],[40,0,3]])))
-  
-  
   
   print("")
   
@@ -186,14 +181,19 @@ def doc_general3():
   hole2 = Point((50,0)).buffer(20,6)
   polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
   density=polygon.inearest(maxDistance=100,angle=90)
-  MultiPoint(density[:,:2]).plot(colors=density[:,2])
-  plt.colorbar()
+  fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
+  fig.tight_layout()
+  
+  MultiPoint(density[:,:2]).plot(colors=density[:,2],axe=axes,fig=fig)
+  
+  
+  
   polygon.savePlot("doc/img/inearest.1.png")
   None
   
 if __name__ == "__main__":
-  doc_general()
+  # doc_general()
   # doc_general2()
-  # doc_general3()
+  doc_general3()
   
   
