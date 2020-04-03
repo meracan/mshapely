@@ -5,7 +5,7 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 from ..linalg import norm,rotate
-from .density import DF
+from .df import DF
 from ..misc import ll2numpy
 
 def removeHoles_Polygon(polygon, area=1.0):

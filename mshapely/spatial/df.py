@@ -2,7 +2,7 @@ import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
 from shapely.geometry import Point,GeometryCollection
-from ..io import readGeometry
+from ..io import GIS
 from ..misc import ll2numpy
 
 def check(function):
@@ -202,14 +202,15 @@ class DF(object):
   
   @staticmethod
   def read(path):
-    collection = readGeometry(path)
-    schema=collection['schema']
-    points=collection['geometry']
+    collection = GIS.read(path)
+    properties=collection.properties
+    schema=collection.schema
+    points=collection.geometry
     minDensity=schema.get('minDensity',None)
     maxDensity=schema.get('maxDensity',None)
     minGrowth=schema.get('minGrowth',None)
     
-    density = list(map(lambda x:[x['density'],x['growth']],collection['properties']))
+    density = list(map(lambda x:[x['density'],x['growth']],properties))
     xy=points.xy
     dp=np.column_stack((xy,density))
     
@@ -266,7 +267,7 @@ class DF(object):
     
     return self
 
-  def plotSave(self,name='plot.png',axe=None):
+  def savePlot(self,name='plot.png',axe=None):
     """
     Save plot to file
     """
@@ -301,9 +302,8 @@ class DF(object):
   
   @staticmethod
   @check
-  def getn_l(d,g,l,skip=True):
-    if skip:n=np.array(np.log(l*(g-1)/d+1)/np.log(g))
-    else:n=np.array(np.log(l*(g-1)/d+1)/np.log(g)-1)
+  def getn_l(d,g,l,ss=0):
+    n=np.array(np.log(l*(g-1)/d+1)/np.log(g)+ss)
     n[n<0.]=0.
     return n
     

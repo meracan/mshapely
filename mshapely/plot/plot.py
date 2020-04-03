@@ -9,6 +9,51 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.path import Path
 from matplotlib.patches import PathPatch
+from inspect import signature
+
+
+def preprocess(function):
+  """
+  Decorator for static methods to check input
+  """
+  def wrapper(geo,*args,**kwargs):
+    fig=kwargs.get("fig",None)
+    axe=kwargs.get("axe",None)
+    defaultPointStyle={"c":"blue", "alpha":1.0,"zorder":1}
+    defaultLineStyle={"c":"blue","linestyle":'solid', "alpha":0.75,"zorder":1,"marker":None}
+    defaultPolygonStyle={"facecolor":"blue", "edgecolor":'black',"zorder":0}
+    
+    
+    kwargs['pointStyle']={**defaultPointStyle, **kwargs.get("pointStyle",{})}
+    kwargs['lineStyle']={**defaultLineStyle, **kwargs.get("lineStyle",{})}
+    kwargs['polygonStyle']={**defaultPolygonStyle, **kwargs.get("polygonStyle",{})}
+    
+    if axe is None:
+      fig, axe = plt.subplots(figsize=(8,8))
+      fig.tight_layout()
+      axe.set_aspect('equal')
+    
+    extent=kwargs.get("extent",None)  
+    
+    if extent is None:
+      xy=geo.xy
+      xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
+      ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))    
+      
+      padx = (xmax-xmin)*0.05
+      pady = (ymax-ymin)*0.05
+      extent=[xmin-padx,ymin-pady,xmax+padx,ymax+pady]
+    
+    kwargs['extent']=extent
+    axe.set_xlim(extent[0], extent[2])
+    axe.set_ylim(extent[1], extent[3])
+    kwargs['fig']=fig
+    kwargs['axe']=axe
+
+    
+    return function(geo,*args,**kwargs)
+  return wrapper
+
 
 def ring_coding(ob):
     # The codes will be all "LINETO" commands, except for "MOVETO"s at the
@@ -29,63 +74,64 @@ def pathify(polygon):
                 + [ring_coding(r) for r in polygon.interiors])
     return Path(vertices, codes)
 
-
-def plotPoints(points,type='o',axe=None,colors=None,fig=None):
+@preprocess
+def plotPoints(points,**kwargs):
+  axe=kwargs["axe"]
+  fig=kwargs["fig"]
+  showColorbar=kwargs.get("showColorbar",False)
+  
   xy=points.xy
-  
-  canvas = plt if axe is None else axe
-  
-  h=canvas.scatter(xy[:,0], xy[:,1], c=colors,alpha=0.75)
-  fig.colorbar(h)
-  # canvas.plot(xy[:,0],xy[:,1], type)
+  h=axe.scatter(xy[:,0], xy[:,1], **kwargs)
+  if showColorbar:
+    fig.colorbar(h)
 
+@preprocess
 def plotPolygons(polygons,*args,**kwargs):
-  xy=polygons.xy
-  xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
-  ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
-  
-  
-  axe=kwargs.get("axe",None)
-  canvas = plt if axe is None else axe
-  # if axe is not None:
-  canvas.set_xlim(xmin, xmax)
-  canvas.set_ylim(ymin, ymax)
-  
+  """
+  Plot Polygons
+  """
   for polygon in polygons:
-    polygon.plot(setLimits=False,*args,**kwargs)
+    polygon.plot(*args,**kwargs)
+
+@preprocess
+def plotLineStrings(lines,*args,**kwargs):
+  """
+  Plot Polygons
+  """
+  for line in lines:
+    line.plot(*args,**kwargs)
+
+@preprocess  
+def plotPolygon(polygon,*args,**kwargs):
+  """
+  Plot Polygon
+  """
+  axe=kwargs["axe"]
+  fig=kwargs["fig"]
+  pointStyle = kwargs['pointStyle']
+  polygonStyle = kwargs['polygonStyle']
+  showPoints=kwargs.get("showPoints",False)
   
-def plotPolygon(polygon,type='o',axe=None,style="plot",color=None,setLimits=True):
-  canvas = plt if axe is None else axe
   path = pathify(polygon)
-  patch = PathPatch(path, facecolor=color, edgecolor='black',zorder=0)
-
-  # Centering
-  if setLimits:
+  patch = PathPatch(path, **polygonStyle)
+  axe.add_patch(patch)
+  if showPoints:
     xy=polygon.xy
-    xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
-    ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))
-    canvas.set_xlim(xmin-1, xmax+1)
-    canvas.set_ylim(ymin-1, ymax+1)
-  
-  canvas.add_patch(patch)
-  if type=="o":
-    canvas.scatter(xy[:,0], xy[:,1], c="black",alpha=0.75,zorder=1)
-    
-  
-  # xy=polygon.exterior.xy
-  # canvas.plot(xy[:,0],xy[:,1],type)
-  # for interior in polygon.interiors:
-  #   xy=interior.xy
-  #   canvas.plot(xy[:,0],xy[:,1],type)
-  
+    axe.scatter(xy[:,0], xy[:,1], **pointStyle)
 
-def plotLineString(linestring,type='-',axe=None,):
+@preprocess
+def plotLineString(linestring,*args,**kwargs):
+  """
+  Plot LineString
+  """  
+  axe=kwargs["axe"]
+  fig=kwargs["fig"]
+  lineStyle = kwargs['lineStyle']
+  
   xy = linestring.xy
-  canvas = plt if axe is None else axe
-  canvas.plot(xy[:,0],xy[:,1], type)
+  axe.plot(xy[:,0],xy[:,1], **lineStyle)
     
     
-def plotSave(name='plot.png',axe=None):
+def plotSave(name='plot.png'):
   plt.savefig(name)
-  canvas = plt if axe is None else axe
-  canvas.clf()
+  plt.clf()

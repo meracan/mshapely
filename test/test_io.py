@@ -4,7 +4,7 @@ import numpy as np
 from shapely.geometry import Point,LineString,Polygon,MultiPoint,MultiLineString,MultiPolygon,GeometryCollection
 
 import mshapely
-from mshapely.io import readGeometry,writeGeometry
+from mshapely.io import GIS
 from mshapely.io import point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,multilinestring2numpy,multipolygon2numpy
 
 def test_tofile():
@@ -15,13 +15,13 @@ def test_tofile():
   
   point = Point((0,0))
   
-  point.write(path_p_geo,type="geojson").write(path_p_shp,type="shp")
-  polygon=point.buffer(100,4).write(path_pol_geo,type="geojson").write(path_pol_shp,type="shp")
+  point.write(path_p_geo).write(path_p_shp)
+  polygon=point.buffer(100,4).write(path_pol_geo).write(path_pol_shp)
   
-  np.testing.assert_almost_equal(readGeometry(path_p_geo)['geometry'].xy.astype(np.float32),point.xy.astype(np.float32))
-  np.testing.assert_almost_equal(readGeometry(path_p_shp)['geometry'].xy.astype(np.float32),point.xy.astype(np.float32))
-  np.testing.assert_almost_equal(readGeometry(path_pol_geo)['geometry'].xy.astype(np.float32),polygon.xy.astype(np.float32))
-  np.testing.assert_almost_equal(readGeometry(path_pol_shp)['geometry'].xy.astype(np.float32),polygon.xy.astype(np.float32))
+  np.testing.assert_almost_equal(GIS.read(path_p_geo).geometry.xy.astype(np.float32),point.xy.astype(np.float32))
+  np.testing.assert_almost_equal(GIS.read(path_p_shp).geometry.xy.astype(np.float32),point.xy.astype(np.float32))
+  np.testing.assert_almost_equal(GIS.read(path_pol_geo).geometry.xy.astype(np.float32),polygon.xy.astype(np.float32))
+  np.testing.assert_almost_equal(GIS.read(path_pol_shp).geometry.xy.astype(np.float32),polygon.xy.astype(np.float32))
   
   point.delete(path_p_geo)
   polygon.delete(path_pol_geo)

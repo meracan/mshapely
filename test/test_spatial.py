@@ -6,7 +6,6 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 import time
 
 import mshapely
-from mshapely.io import readGeometry
 from mshapely.spatial import DF
 
 def test_resample():
@@ -84,7 +83,7 @@ def test_inearest_dresample():
   df1.plot(axe=axes[1],fig=fig,showDP=True)
   
   
-  df.plotSave("test/data/density.1.png")
+  df.savePlot("test/data/density.1.png")
   
   np.testing.assert_almost_equal(df.dp[:,:2],df1.dp[:,:2],decimal=6)
   
@@ -97,10 +96,10 @@ def test_dresample():
   r=LineString([(0,0),(30,0)]).dresample(df)
   
   results = np.array(
-    [ 0.        ,  1.    ,      2.2     ,    3.64  ,      5.368 ,      7.4416,
-  9.92992   , 12.915904,   16.4990848  ,20.56560333 ,25.28280166 ,30.        ]
+    [ 0.        ,  1.    ,      2.2     ,    3.64  ,      5.368 ,      7.395064,
+  9.8188716   , 12.7187716,   16.1899824  ,20.3467662 ,25.1733831 ,30.        ]
     )
-  # np.testing.assert_almost_equal(r.xy[:,0], results)
+  np.testing.assert_almost_equal(r.xy[:,0], results)
   
   
   line = LineString([(0,0),(200,0)])
@@ -112,10 +111,10 @@ def test_dresample():
 
 
 if __name__ == "__main__":
-  # test_resample()
-  # test_removeHoles()
-  # test_dsimplify()
-  # test_inearest_dresample()
-  # test_dresample()
+  test_resample()
+  test_removeHoles()
+  test_dsimplify()
+  test_inearest_dresample()
+  test_dresample()
   
   

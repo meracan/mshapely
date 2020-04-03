@@ -1,2 +1,2 @@
 from .tonumpy import *
-from .tofile import *
+from .gis import GIS

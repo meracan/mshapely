@@ -12,8 +12,8 @@ from shapely.ops import cascaded_union,transform
 from shapely import speedups
 
 from .misc import add_attribute,add_method
-
-from .io import writeGeometry,readGeometry,deleteGeometry,point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,\
+from .io import GIS
+from .io import point2numpy,linestring2numpy,polygon2numpy,multipoint2numpy,\
   multilinestring2numpy,multipolygon2numpy
 
 
@@ -21,7 +21,7 @@ from .spatial import DF
 from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
 
-from .plot import plotPoints,plotLineString,plotPolygon,plotPolygons,plotSave
+from .plot import plotPoints,plotLineString,plotLineStrings,plotPolygon,plotPolygons,plotSave
 
 speedups.enable()
 
@@ -129,8 +129,8 @@ def xy(self):
 # Write to files
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
-def write(self, *args, **kwargs):
-  writeGeometry(self, *args, **kwargs)
+def write(self,path,*args, **kwargs):
+  GIS(self,*args, **kwargs).write(path)
   return self
 
 
@@ -139,7 +139,7 @@ def write(self, *args, **kwargs):
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def delete(self, *args, **kwargs):
-  deleteGeometry(*args, **kwargs)
+  GIS.delete(*args, **kwargs)
   return self
 
 #
@@ -276,10 +276,15 @@ def largest(self):
   return self
 
 @add_method(MultiPolygon)
-def largest(self):
+def largest(self,return_other=False):
   # TODO: Might need to fill holes
   areas = numpy.array([polygon.area for polygon in self])
-  return self[numpy.argmax(areas)]
+  
+  index=numpy.argmax(areas)
+  if return_other:
+    array=[polygon for i,polygon in enumerate(self) if i!=index]
+    return self[index],array
+  return self[index]
   
 #
 # Correct polygons and multipolygons
@@ -405,8 +410,7 @@ def plot(self,*args,**kwargs):
 
 @add_method(MultiLineString)
 def plot(self,*args,**kwargs):
-  for linestring in self:
-    linestring.plot(*args,**kwargs)
+  plotLineStrings(self,*args,**kwargs)
   return self
 
 @add_method(MultiPolygon)

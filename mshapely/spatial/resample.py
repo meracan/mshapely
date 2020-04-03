@@ -5,7 +5,7 @@ from shapely.geometry import mapping, shape, Point, LineString, Polygon,MultiPoi
 from shapely.ops import cascaded_union,split,nearest_points,linemerge,snap
 from tqdm import tqdm
 
-from .density import DF
+from .df import DF
 
 def resample_LineString(linestring, maxLength=1.0):
   """

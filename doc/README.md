@@ -392,7 +392,7 @@ Examples
 ````
 [![inearest.1](img/inearest.1.png)](img/inearest.1.png)
 
-#### object.plot()
+#### object.plot() and object.savePlot()
 ```
   Plot geometry object in matplotlib
   
@@ -405,17 +405,13 @@ Examples
 ```
 Examples
 ```python
-````
-#### object.savePlot(path)
-```
-  Save plot to file
-  
-  Parameters
-  ----------
-  path: filepath
-```
-Examples
-```python
+  fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(8, 8))
+  fig.tight_layout()
+  LineString([(0,0),(10,0)]).plot("o-",axes[0][0]).resample().plot("o-",axes[0][1])
+  polygon=Polygon([(0, 0), (0, 10),(10,10),(10,0),(0,0)])
+  polygon.plot("o",axes[1][0])\
+   .resample().plot("o",axes[1][1])\
+   .savePlot("doc/img/resample.1.png")
 ````
 
 ## Creating user guide

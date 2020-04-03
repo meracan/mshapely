@@ -21,9 +21,9 @@ def test_DF_static():
     np.testing.assert_almost_equal(DF.getn_D(np.array([1]),1.2,5.1597804),[9])
     
     # Get n based on minDensity,growth and distance
-    np.testing.assert_almost_equal(DF.getn_l(1,1.2,25.9586821,False),[9])
+    np.testing.assert_almost_equal(DF.getn_l(1,1.2,25.9586821,-1),[9])
     
-    np.testing.assert_almost_equal(DF.getn_l(np.array([1,2]),np.array([1.2,1.2]),np.array([25.9586821]),False),[9,6.0193865])
+    np.testing.assert_almost_equal(DF.getn_l(np.array([1,2]),np.array([1.2,1.2]),np.array([25.9586821]),-1),[9,6.0193865])
 
 def test_ll2numpy():
   None
