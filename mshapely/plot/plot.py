@@ -19,6 +19,8 @@ def preprocess(function):
   def wrapper(geo,*args,**kwargs):
     fig=kwargs.get("fig",None)
     axe=kwargs.get("axe",None)
+    clear=kwargs.get("clear",False)
+    figsize=kwargs.get("figsize",(4,4))
     defaultPointStyle={"c":"blue", "alpha":1.0,"zorder":1}
     defaultLineStyle={"c":"blue","linestyle":'solid', "alpha":0.75,"zorder":1,"marker":None}
     defaultPolygonStyle={"facecolor":"blue", "edgecolor":'black',"zorder":0}
@@ -28,8 +30,10 @@ def preprocess(function):
     kwargs['lineStyle']={**defaultLineStyle, **kwargs.get("lineStyle",{})}
     kwargs['polygonStyle']={**defaultPolygonStyle, **kwargs.get("polygonStyle",{})}
     
+    
     if axe is None:
-      fig, axe = plt.subplots(figsize=(8,8))
+      if clear:plt.clf()
+      fig, axe = plt.subplots(figsize=figsize)
       fig.tight_layout()
       axe.set_aspect('equal')
     

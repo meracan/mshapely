@@ -80,10 +80,57 @@ def to(self,instance):
 #
 @add_attribute(GeometryCollection)
 def np(self):
+  """
+  Returns numpy array of the object.
+  It returns coordinates,(and ids for line and polygon)
+  XY coordinates are always place last.
+
+  Note
+  ----
+  x:x-coordinate
+  y:y-coordinate
+  lid: line id
+  pid: polygon id
+  cid: collection id
+  
+  Output
+  ------ 
+  ndarray: 2D array
+   shape: Point, (npoint,2) : [[x,y]] 
+          LineString, (npoint,3) : [[lid,x,y]]
+          Polygon, (npoint,4) : [[pid,lid,x,y]]
+          MultiPoint, (npoint,3) : [[x,y]]
+          MultiLineString, (npoint,4) : [[cid,lid,x,y]]
+          MultiPolygon, (npoint,5) : [[cid,pid,lid,x,y]]
+  """
   return self.toShape().np
   
 @add_attribute([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def np(self):
+  """
+  Returns numpy array of the object.
+  It returns coordinates,(and ids for line and polygon)
+  XY coordinates are always place last.
+
+  Note
+  ----
+  x:x-coordinate
+  y:y-coordinate
+  lid: line id
+  pid: polygon id
+  cid: collection id
+  
+  Output
+  ------ 
+  ndarray: 2D array
+   shape: Point, (npoint,2) : [[x,y]] 
+          LineString, (npoint,3) : [[lid,x,y]]
+          Polygon, (npoint,4) : [[pid,lid,x,y]]
+          MultiPoint, (npoint,3) : [[x,y]]
+          MultiLineString, (npoint,4) : [[cid,lid,x,y]]
+          MultiPolygon, (npoint,5) : [[cid,pid,lid,x,y]]
+  
+  """
   return self._np()
 #
 # Get NP with function

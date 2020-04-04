@@ -1,11 +1,11 @@
-# MERACAN Shapely (mshapely)
-A [shapely](https://shapely.readthedocs.io/en/latest/manual.html) wrapper to manipulate spatial data for Marine Energy Resource Assessment Canada.
+# MERACAN Shapely (MShapely)
+MShapely is a [Shapely](https://shapely.readthedocs.io/en/latest/manual.html) wrapper to enhance shapely functionalities and to manipulate spatial data for Marine Energy Resource Assessment Canada.
 
-It provides extra functionality such as complex resampling, simplification, nearest nodes, etc.
+It provides extra functionality such as complex resampling, simplification, nearest nodes, etc. MShapely was mainly developed to help the development of complex 2-dimensional meshes for free-surface hydrodynamic models in coastal regions.
 
 ## Installation
 This package was developed,tested and built using conda.
-mshapely uses mainly shapely,numpy,scipy, and fiona.
+MShapely uses shapely,numpy,scipy,fiona and matplotlib.
 Only tested with python >=3.6
 ```bash
 conda create -n mshapely python=3.8

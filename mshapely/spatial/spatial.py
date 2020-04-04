@@ -78,9 +78,9 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
   
   Notes
   -----
-  Correction buffers are used to correc geometric issues.
   
-  TODO: points should be replace by features to include points,lines and polygons
+  
+  
     
   """
   

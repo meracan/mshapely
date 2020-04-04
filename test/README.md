@@ -22,6 +22,7 @@ PYTHONPATH=../mshapely/ python3 test/test_io.py
 PYTHONPATH=../mshapely/ python3 test/test_linalg.py
 PYTHONPATH=../mshapely/ python3 test/test_spatial.py
 PYTHONPATH=../mshapely/ python3 test/test_density.py
+PYTHONPATH=../mshapely/ jupyter notebook --ip=0.0.0.0 --port=8080 --no-browser
 ```
 
 

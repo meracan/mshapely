@@ -3,7 +3,7 @@ MShapely is a [Shapely](https://shapely.readthedocs.io/en/latest/manual.html) wr
 
 It provides extra functionality such as complex resampling, simplification, nearest nodes, etc. MShapely was mainly developed to help the development of complex 2-dimensional meshes for free-surface hydrodynamic models in coastal regions.
 
-(Todo) add image here
+[![mesh](img/mesh.png)](img/mesh.png)
 
 
 #### Chaining Method
@@ -33,6 +33,15 @@ New attributes and methods are applied for all geometric objects (Point, LineStr
 However, some of the methods are not applicable (i.e point.resample()) and returns the original object. 
 Most of the methods returns a geometric object with a few exception (i.e. object.inearest()) - check "output" in the method description.
 
+#### Creating user guide
+The examples were generated using [doc_mshapely.py](doc_mshapely.py).
+
+During developmemt, the following command was used to create the outputs.
+
+```python
+PYTHONPATH=../mshapely/ python3 doc/doc_mshapely.py
+```
+#### Methods and Attributes
 #### object.np
 ```
   Returns numpy array of the object.
@@ -150,6 +159,13 @@ Examples
     If False, computer normal vector from segment.
     Default is True.
   
+  Note
+  ----
+  xo:x-source point
+  yo:y-source point
+  xn:x-target vector point
+  yn:y-target vector point
+  
   Output
   ------ 
   ndarray: 2D array
@@ -180,7 +196,8 @@ Examples
 #### object.write(path[,schema,properties])
 ```
   """
-  Write geometry object to file (geojson or shapefile).
+  Write geometry object to file depending on the file extension.
+  Works for geojson and shapefile.
   
   Parameters
   ----------
@@ -201,8 +218,7 @@ Examples
 #### object.delete(path) or mshapely.io.delete(path)
 ```
   """
-  Delete file. 
-  Deleting shapefiles will delete associate files.
+  Delete file(s).For shapefiles, it will delete associate files(.dbf,.shx,.cgf).
   
   Parameters
   ----------
@@ -212,34 +228,7 @@ Examples
 Examples
 ```python
 >>> path_p_shp="test_io.point.shp"
->>> Point((0,0)).write(path_p_shp,type="shp").delete(path_p_shp)
-```
-
-#### object.densityField(properties[,minDensity=None,maxDensity=None,growth=None])
-```
-  Creates a Density Field object. This is used to resample (Multi)LineString and (Multi)Polygon based on a density field.
-  Takes xy coordinates from geometry object.
-  Needs properties: density and growth.
-  
-  Parameters
-  ----------
-  properties: list
-    Requires a list of dict containing density and growth, {"density","growth"}
-    The length of list must be equal to the length of xy.
-  minDensity: float,
-    Default minDensity of the field. If None, it takes minimum value of array-density
-  maxDensity: float,
-    Default maxDensity of the field. If None, it takes maximum value of array-density
-  growth:float,
-    Default growth of the field. If None,it will take minimum value of array-growth
-  Output
-  -----
-  DensityField
-```
-Examples
-```python
->>> path_p_shp="test_io.point.shp"
->>> Point((0,0)).write(path_p_shp,type="shp").delete(path_p_shp)
+>>> Point((0,0)).write(path_p_shp).delete(path_p_shp)
 ```
 
 #### object.resample([,maxLength])
@@ -265,13 +254,12 @@ Examples
 
 #### object.dresample(df[,mp])
 ```
-  Resample object using a 2D density growth field. 
-  The length of the segments are automatically calculated based on the density growth field.
-  The growth of the field depends on the density points and growth factor.
+  Resample object using a 2D Density Field object. 
+  The length of the segments are automatically calculated using the Density Field.
   
   Parameters
   ----------
-  density: Density Field object
+  df: Density Field object
   mp:MultiPoint,optional
    MultiPoint are part of the resampling. 
    An error will raise if the distance between points are smaller than minDensity.
@@ -334,8 +322,26 @@ Examples
 
 
 #### mshapely.dsimplify(df)
-
+```
+  Simplify polygons and remove points by respecting Density Field.
+  It mainly uses the buffer/unbuffer techniques for different density area/zone.
+  The zones are created using different buffer distance on the density points.
+  To speed up simplification, the function allows fine and coarse resolution polygons
+  
+  Parameters
+  ----------
+  polyon:Polygon
+    Domain or outline
+  df:Density Field
+  limitFineDensity:float
+    Threshold value to swtich from fine to coarse
+  fine:Polygon or MultiPolygon
+    Fine resolution data
+  coarse:Polygon or MultiPolygon
+    Coarse resolution data
+```
 ```python
+>>> exterior=Point(0,0).buffer(100).exterior
 >>> holes = [
     Point(10,0).buffer(5).exterior.coords[::-1],
     Point(25,0).buffer(5).exterior.coords[::-1],
@@ -346,33 +352,36 @@ Examples
     Point(0,40).buffer(10).exterior.coords[::-1],
     Point(0,65).buffer(10).exterior.coords[::-1],
     Point(0,87.5).buffer(10).exterior.coords[::-1],
-    
     ]
+>>> polygon = Polygon(exterior,holes)
   
-  
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,1,1.2]]),minDensity=1,maxDensity=100)).plot("o-",axes[0][1])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[0][2])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2]]),minDensity=10,maxDensity=100)).plot("o-",axes[1][0])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2]]),minDensity=20,maxDensity=100)).plot("o-",axes[1][1])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,100,1.2]]),minDensity=100,maxDensity=1000)).plot("o-",axes[1][2])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][0])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][1])
->>>   polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100)).plot("o-",axes[2][2])
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,1,1.2]]),minDensity=1,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2]]),minDensity=5,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2]]),minDensity=10,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2]]),minDensity=20,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,100,1.2]]),minDensity=100,maxDensity=1000))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,5,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,10,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100))
+>>> polygon.dsimplify(mshapely.DF(np.array([[0,0,20,1.2],[0,100,5,1.2]]),minDensity=5,maxDensity=100))
 ```
 [![dsimplify.1](img/dsimplify.1.png)](img/dsimplify.1.png)
 
 #### object.inearest(maxDistance[,angle,nvalue])
 ```
-  Computes nearest interior nodes based on its normal and angle range.
+  Computes nearest interior nodes based on its normal and an angle spread.
+  The maximum search distance needs to be specified to avoid searching large quantities of points in large domains. 
   
   Parameters
   ----------
   maxDistance:float
    Maximum search distance.
-  angle:float
-   Angle range. Default value is 90.0. 
+   Default is 1.0
+  angle:float,0<angle<180.0 
+   Angle spread.  Limits the search within the angle spread.
+   Default value is 90.0. 
   nvalue:int
     Number of points processed at the same time.
+    Default is 1000
   
   Output
   ------
@@ -388,7 +397,7 @@ Examples
 >>> hole1 = Point((-50,0)).buffer(20)
 >>> hole2 = Point((50,0)).buffer(20)
 >>> polygon = Polygon(polygon.exterior,[hole1.exterior.coords[::-1],hole2.exterior.coords[::-1]])
->>> density=polygon.inearest(maxDistance=100,angle=90)
+>>> distance=polygon.inearest(maxDistance=100,angle=90)
 ````
 [![inearest.1](img/inearest.1.png)](img/inearest.1.png)
 
@@ -414,8 +423,3 @@ Examples
    .savePlot("doc/img/resample.1.png")
 ````
 
-## Creating user guide
-
-```python
-PYTHONPATH=../mshapely/ python3 doc/doc_mshapely.py
-```
