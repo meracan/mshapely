@@ -24,12 +24,13 @@ def preprocess(function):
     defaultPointStyle={"c":"blue", "alpha":1.0,"zorder":1}
     defaultLineStyle={"c":"blue","linestyle":'solid', "alpha":0.75,"zorder":1,"marker":None}
     defaultPolygonStyle={"facecolor":"blue", "edgecolor":'black',"zorder":0}
+    defaultTriStyle={"zorder":0}
     
     
     kwargs['pointStyle']={**defaultPointStyle, **kwargs.get("pointStyle",{})}
     kwargs['lineStyle']={**defaultLineStyle, **kwargs.get("lineStyle",{})}
     kwargs['polygonStyle']={**defaultPolygonStyle, **kwargs.get("polygonStyle",{})}
-    
+    kwargs['triStyle']={**defaultTriStyle, **kwargs.get("triStyle",{})}
     
     if axe is None:
       if clear:plt.clf()
@@ -137,6 +138,17 @@ def plotLineString(linestring,*args,**kwargs):
   xy = linestring.xy
   axe.plot(xy[:,0],xy[:,1], **lineStyle)
     
+@preprocess
+def plotTri(tri,*args,**kwargs):
+  """
+  Plot LineString
+  """  
+  axe=kwargs["axe"]
+  fig=kwargs["fig"]
+  triStyle = kwargs['triStyle']
+  
+  axe.triplot(tri,**triStyle)
+  
     
 def plotSave(name='plot.png'):
   plt.savefig(name)

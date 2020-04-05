@@ -17,6 +17,8 @@ pytest
 ```bash
 cd mshapely
 conda activate mshapely
+pip install -e ../mshapely
+
 PYTHONPATH=../mshapely/ pytest
 PYTHONPATH=../mshapely/ python3 test/test_io.py
 PYTHONPATH=../mshapely/ python3 test/test_linalg.py
