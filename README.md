@@ -21,7 +21,7 @@ git clone https://github.com/meracan/mshapely.git
 pip install -e ./mshapely
 ```
 ### Usage, user guide and examples
-[Docs](doc/README.md)
+[Docs](doc/doc_mshapely.ipynb)
 
 ### Testing
 [Docs](test/README.md)

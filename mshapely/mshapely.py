@@ -80,29 +80,6 @@ def to(self,instance):
 #
 @add_attribute(GeometryCollection)
 def np(self):
-  """
-  Returns numpy array of the object.
-  It returns coordinates,(and ids for line and polygon)
-  XY coordinates are always place last.
-
-  Note
-  ----
-  x:x-coordinate
-  y:y-coordinate
-  lid: line id
-  pid: polygon id
-  cid: collection id
-  
-  Output
-  ------ 
-  ndarray: 2D array
-   shape: Point, (npoint,2) : [[x,y]] 
-          LineString, (npoint,3) : [[lid,x,y]]
-          Polygon, (npoint,4) : [[pid,lid,x,y]]
-          MultiPoint, (npoint,3) : [[x,y]]
-          MultiLineString, (npoint,4) : [[cid,lid,x,y]]
-          MultiPolygon, (npoint,5) : [[cid,pid,lid,x,y]]
-  """
   return self.toShape().np
   
 @add_attribute([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
@@ -157,6 +134,34 @@ def _np(self,*args,**kwargs):
 
 @add_method(MultiPolygon)
 def _np(self,*args,**kwargs):
+  """
+  Returns object numpy array with normal vector information.
+  Only applicable for LineString, Polygon, MultiLineString, MultiPolygon
+  
+  Parameters
+  ----------
+  isNorm: bool,optional
+    If True, returns normal vectors information
+  onPoint: bool,optional
+    If True,computes normal vectors on point.
+    If False, computer normal vector from segment.
+    Default is True.
+  
+  Note
+  ----
+  xo:x-source point
+  yo:y-source point
+  xn:x-target vector point
+  yn:y-target vector point
+  
+  Output
+  ------ 
+  ndarray: 2D array
+   shape: LineString, (npoint,7) : [[lid,xo,yo,xn,yn,x,y]]
+          Polygon, (npoint,4) : [[pid,lid,xo,yo,xn,yn,x,y]]
+          MultiLineString, (npoint,4) : [[cid,lid,xo,yo,xn,yn,x,y]]
+          MultiPolygon, (npoint,5) : [[cid,pid,lid,xo,yo,xn,yn,x,y]]  
+  """
   return multipolygon2numpy(self,*args,**kwargs)
 
 
@@ -170,6 +175,13 @@ def xy_(feature):
 
 @add_attribute([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def xy(self):
+  """
+  Returns numpy array of the object xy coordinates.
+  Output
+  ------ 
+  ndarray: 2D array
+   shape:(npoint,2) : [[x,y]] 
+  """
   return xy_(self)
 
 #
@@ -177,6 +189,19 @@ def xy(self):
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def write(self,path,*args, **kwargs):
+  """
+  Write geometry object to file depending on the file extension.
+  Works for geojson and shapefile.
+  
+  Parameters
+  ----------
+  path: str
+  schema: dict,optional
+   Schema is used for shapefiles. 
+   Creates it automatically unless specified.
+  properties: list,optional
+   Length must be equal to length of the object.  
+  """
   GIS(self,*args, **kwargs).write(path)
   return self
 
@@ -186,6 +211,13 @@ def write(self,path,*args, **kwargs):
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def delete(self, *args, **kwargs):
+  """
+  Delete file(s).For shapefiles, it will delete associate files(.dbf,.shx,.cgf).
+  
+  Parameters
+  ----------
+  path: str  
+  """
   GIS.delete(*args, **kwargs)
   return self
 
@@ -194,6 +226,9 @@ def delete(self, *args, **kwargs):
 #
 @add_method([GeometryCollection,Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
 def proj(self, project):
+  """
+  Change projection
+  """
   return transform(project,self)
 
 #
@@ -223,6 +258,7 @@ def resample(self, *args, **kwargs):
 @add_method(MultiPolygon)
 def resample(self, *args, **kwargs):
   return MultiPolygon([polygon.resample(*args, **kwargs) for polygon in self])
+resample.__doc__=resample_Polygon.__doc__
 
 #
 # Resample Density
@@ -251,30 +287,7 @@ def dresample(self, *args, **kwargs):
 @add_method(MultiPolygon)
 def dresample(self, *args, **kwargs):
   return MultiPolygon([polygon.dresample(*args, **kwargs) for polygon in self])
-
-
-# # 
-# # Sectors
-# # 
-# @add_method(GeometryCollection)
-# def sectors(self):
-#   return self.toShape().sectors()
-  
-# @add_method([Point,MultiPoint])
-# def sectors(self, *args, **kwargs):
-#   return self
-  
-# @add_method([LineString,Polygon])
-# def sectors(self, *args, **kwargs):
-#   onPoint=kwargs.get('onPoint',False)
-#   pts=self._np(isNorm=True, onPoint=onPoint)
-#   return pts,pieSectors(pts, *args, **kwargs)
-
-# @add_method([MultiLineString,MultiPolygon])
-# def sectors(self, *args, **kwargs):
-#   multi = [item.sectors(*args, **kwargs) for item in self]
-#   return multi
-
+dresample.__doc__=dresample_Polygon.__doc__
 
 # 
 # Remove Holes
@@ -294,6 +307,8 @@ def removeHoles(self, *args, **kwargs):
 @add_method(MultiPolygon)
 def removeHoles(self, *args, **kwargs):
   return MultiPolygon([polygon.removeHoles(*args, **kwargs) for polygon in self])
+removeHoles.__doc__=removeHoles_Polygon.__doc__
+
 # 
 # Remove Polygons
 # 
@@ -307,8 +322,8 @@ def removePolygons(self, *args, **kwargs):
 
 @add_method(MultiPolygon)
 def removePolygons(self, *args, **kwargs):
+  self.__doc__=remove_Polygons.__doc__
   return remove_Polygons(self, *args, **kwargs)
-
 
 
 # 
@@ -324,6 +339,9 @@ def largest(self):
 
 @add_method(MultiPolygon)
 def largest(self,return_other=False):
+  """
+  Gets only the largest polygon from a MultiPolygon and GeometryCollection
+  """
   # TODO: Might need to fill holes
   areas = numpy.array([polygon.area for polygon in self])
   
@@ -333,20 +351,6 @@ def largest(self,return_other=False):
     return self[index],array
   return self[index]
   
-#
-# Correct polygons and multipolygons
-#
-@add_method(GeometryCollection)
-def correct(self,value):
-  return self.toShape().correct(value)
-
-@add_method([Point,MultiPoint,LineString,MultiLineString])
-def correct(self):
-  return self
-  
-@add_method([Polygon,MultiPolygon])
-def correct(self,value):
-  return self.buffer(value)
 
 #
 # Get exterior shape
@@ -365,6 +369,9 @@ def getExterior(self,*args,**kwargs):
 
 @add_method(MultiPolygon)
 def getExterior(self,*args,**kwargs):
+  """
+  Get exterior polygon
+  """  
   return MultiPolygon([Polygon(polygon.exterior) for polygon in self])
 
 #
@@ -405,6 +412,7 @@ def dsimplify(self,*args,**kwargs):
 @add_method(MultiPolygon)
 def dsimplify(self,*args,**kwargs):
   return cascaded_union([polygon.dsimplify(*args, **kwargs) for polygon in self])
+dsimplify.__doc__ = dsimplify_Polygon.__doc__
 
 #
 # Compute nearest interior nodes
@@ -426,7 +434,7 @@ def inearest(self,*args,**kwargs):
   a=numpy.array([polygon.inearest(*args, **kwargs) for polygon in self])
   l,m,n=a.shape
   return numpy.reshape(a, (l*m, n)) 
-
+inearest.__doc__ = inearest_Polygon.__doc__
 
 #
 # Plot

@@ -77,7 +77,8 @@ class DF(object):
     Note
     ----------
     It creates groupId and pointId automatically
-    The field parameter minDensity,maxDensity and minGrowth are defined when DF is created.
+    The field parameter minDensity,maxDensity and minGrowth are only defined when DF is created.
+    This will not change minDensity, maxDensity and minGrowth.
     """
     
     array=self._checkInput(array)
@@ -144,16 +145,19 @@ class DF(object):
   def getDensity(self,tp,maxDensity=None,dp=None,return_index=False):
     """
     Get field density
+    
     Parameters
     ----------
     tp:2D ndarray : [[x,y]]
       Target points
+    
     maxDensity:float
-      This is mainly used during simplication. It limits the search instead of self.maxDensity
+      Used during simplication. It limits the search instead of self.maxDensity
     dp:2D ndarray : [[x,y,density,growth,groupId,pointId]]
-      Density points. This is mainly used during simplication and used instead of self.dp.
+      Density points
+      Used during simplication and replaces self.dp.
     return_index:
-      This is mainly used during simplication. It returns the index instead of values.
+      Used during simplication. It returns the index instead of values.
     Note
     ----
       dd=Density for every (sub)target point and density points

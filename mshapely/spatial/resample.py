@@ -9,17 +9,14 @@ from .df import DF
 
 def resample_LineString(linestring, maxLength=1.0):
   """
-  Resample linstring based on maxLength
+  Resample object using equal segment length. 
+  The segment is automatically calculated using the length of the LineString and maxLength parameter.
+  The segment is equal or smaller than the maxLength.
   
   Parameters
   ----------
-  linestring: 
-  maxLength: 
-    (default=1.0)
-  
-  Example
-  ------ 
-  TODO
+  maxLength: float,optional
+    Default is 1.0.
   """     
   if maxLength <= 0.0: return linestring
   n = np.max([np.ceil(linestring.length / maxLength), 1.0])
@@ -32,20 +29,6 @@ def resample_LineString(linestring, maxLength=1.0):
 
 
 def _resample_Polygon(linestring, maxLength=1.0):
-  """
-  Resample Polygon based on maxLength
-  
-  Parameters
-  ----------
-  linestring: 
-  maxLength: 
-    (default=1.0)
-  
-  Example
-  ------ 
-  TODO
-  """     
-  
   if maxLength <= 0.0: return linestring
   n = np.max([np.ceil(linestring.length / maxLength), 3.0])
   length = linestring.length / n
@@ -57,31 +40,13 @@ def _resample_Polygon(linestring, maxLength=1.0):
 
 
 def resample_Polygon(polygon, *args, **kwargs):
-  """
-  Resample Polygon
-  
-  Parameters
-  ----------
-  polygon: 
-  
-  Example
-  ------ 
-  TODO
-  """ 
   exterior = Polygon(_resample_Polygon(polygon.exterior, *args, **kwargs))
   interiors = [Polygon(_resample_Polygon(interior, *args, **kwargs)) for interior in polygon.interiors]
   interiors = cascaded_union(interiors)
   return exterior.difference(interiors)
-
+resample_Polygon.__doc__=resample_LineString.__doc__
 
 def _dresample_LineString(linestring, df,progress=False):
-  """ 
-  Resample linestring based on density points
-  
-  Parameters
-  ----------      
-  df : Density field
-  """
   minDensity=df.minDensity
   maxDensity=df.maxDensity
   minGrowth=df.minGrowth
@@ -156,7 +121,18 @@ def _dresample_LineString(linestring, df,progress=False):
   return newlinestring
 
 def dresample_LineString(linestring,df,mp=None,*args, **kwargs):
+  """ 
+  Resample object using a 2D Density Field object. 
+  The length of the segments are automatically calculated using the Density Field.
   
+  Parameters
+  ----------
+  df: Density Field object
+  mp:MultiPoint,optional
+   MultiPoint are part of the resampling. 
+   An error will raise if the distance between points are smaller than minDensity.
+   
+  """  
   if(mp is not None):
     segments = _split_line_with_multipoint(linestring,mp)
     return linemerge([_dresample_LineString(s,df,*args, **kwargs) for s in segments])
@@ -166,13 +142,6 @@ def dresample_LineString(linestring,df,mp=None,*args, **kwargs):
 
   
 def dresample_Polygon(polygon,*args, **kwargs):
-  """ 
-  Resample Polygon with density points
-  
-  Parameters
-  ----------      
-  df : Density field
-  """   
   progress=False
   temp=kwargs
   if 'progress' in kwargs:
@@ -198,6 +167,8 @@ def dresample_Polygon(polygon,*args, **kwargs):
   
   # raise Exception("asd")
   return Polygon(exterior.exterior,interiors)
+dresample_Polygon.__doc__=dresample_LineString.__doc__
+
 
 def _split_line_with_point(line, splitter):
   """ 
@@ -205,11 +176,7 @@ def _split_line_with_point(line, splitter):
   
   Parameters
   ----------      
-  
-  
-  Example
-  ------ 
-  TODO
+
   """     
   
   assert (isinstance(line, LineString))

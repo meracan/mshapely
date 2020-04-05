@@ -20,7 +20,7 @@ def preprocess(function):
     fig=kwargs.get("fig",None)
     axe=kwargs.get("axe",None)
     clear=kwargs.get("clear",False)
-    figsize=kwargs.get("figsize",(4,4))
+    figsize=kwargs.get("figsize",(6,6))
     defaultPointStyle={"c":"blue", "alpha":1.0,"zorder":1}
     defaultLineStyle={"c":"blue","linestyle":'solid', "alpha":0.75,"zorder":1,"marker":None}
     defaultPolygonStyle={"facecolor":"blue", "edgecolor":'black',"zorder":0}
@@ -44,8 +44,9 @@ def preprocess(function):
       xmin, xmax = (np.min(xy[:,0]),np.max(xy[:,0]))
       ymin, ymax = (np.min(xy[:,1]),np.max(xy[:,1]))    
       
-      padx = (xmax-xmin)*0.05
-      pady = (ymax-ymin)*0.05
+      padx = np.maximum(1,(xmax-xmin)*0.05)
+      pady = np.maximum(1,(ymax-ymin)*0.05)
+      
       extent=[xmin-padx,ymin-pady,xmax+padx,ymax+pady]
     
     kwargs['extent']=extent
@@ -83,9 +84,10 @@ def plotPoints(points,**kwargs):
   axe=kwargs["axe"]
   fig=kwargs["fig"]
   showColorbar=kwargs.get("showColorbar",False)
+  pointStyle = kwargs['pointStyle']
   
   xy=points.xy
-  h=axe.scatter(xy[:,0], xy[:,1], **kwargs)
+  h=axe.scatter(xy[:,0], xy[:,1], **pointStyle)
   if showColorbar:
     fig.colorbar(h)
 

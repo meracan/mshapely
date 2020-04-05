@@ -17,10 +17,6 @@ def removeHoles_Polygon(polygon, area=1.0):
   polygon: 
   area: 
     default=1.0
-  
-  Example
-  ------ 
-  TODO
   """     
   interiors = [Polygon(interior) for interior in list(polygon.interiors)]
   areas = np.array([interior.area for interior in interiors])
@@ -38,13 +34,7 @@ def remove_Polygons(polygons, area=1.0):
   polygons:MultiPolygon 
   area: 
     default=1.0
-  
-  Example
-  ------ 
-  TODO
   """     
-  # interiors = [Polygon(interior) for interior in list(polygon.interiors)]
-  # print("Julien")
   areas = np.array([polygon.area for polygon in list(polygons)])
   indexes = np.where(areas > area)[0]
   polygons = [polygons[i] for i in indexes]
@@ -63,25 +53,24 @@ def cArea(d):
   return np.pi*np.power(d*0.5,2.)
     
 
-def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
+def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,progress=False):
   """
-  Simplify polygons and remove points by respecting minimum density field.
+  Simplify polygons and remove points by respecting Density Field.
   It mainly uses the buffer/unbuffer techniques for different density area/zone.
+  The zones are created using different buffer distance on the density points.
+  To speed up simplification, the function allows fine and coarse resolution polygons
   
   Parameters
   ----------
   polyon:Polygon
-  df:Density field
-  limitFineDensity:
-  fine:
-  coarse:
-  
-  Notes
-  -----
-  
-  
-  
-    
+    Domain or outline
+  df:Density Field
+  limitFineDensity:float
+    Threshold value to swtich from fine to coarse
+  fine:Polygon or MultiPolygon
+    Fine resolution data
+  coarse:Polygon or MultiPolygon
+    Coarse resolution data
   """
   
   points = df.dp
@@ -151,7 +140,7 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
   ndomain=None
   prev=None
   _dd=None
-  t=tqdm(total=len(steps), unit_scale=True)
+  if progress:t=tqdm(total=len(steps), unit_scale=True)
   for i,d in enumerate(steps):
     _dd=DF.getD_l(minDensity,minGrowth,d)
     if(_dd>limitFineDensity):
@@ -162,8 +151,8 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None):
       opolygon=fine
     ndomain,prev=process(opolygon,ndomain,prev,d)
     # ndomain.plot()
-    t.update(1)
-  t.close()
+    if progress:t.update(1)
+  if progress:t.close()
   
   ndomain,prev=process(None,ndomain,prev,maxDistance,polygon)
   
@@ -209,20 +198,29 @@ def _inearest_Polygon(p2,p1,angle=90.0):
   
   return m
 
-def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100):
+def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100,progress=False):
   """
-  Computes nearest interior nodes
+  Computes nearest interior nodes based on its normal and an angle spread.
+  The maximum search distance needs to be specified to avoid searching large quantities of points in large domains. 
   
   Parameters
   ----------
-  
-  polygon:Polygon
-    2D array, shape(npoints,2)
   maxDistance:float
-  angle:
+   Maximum search distance.
+   Default is 1.0
+  angle:float,0<angle<180.0 
+   Angle spread.  Limits the search within the angle spread.
+   Default value is 90.0. 
   nvalue:int
-    npoints to search kdtree
+    Number of points processed at the same time.
+    Default is 1000
   
+  Output
+  ------
+  ndarray:2D array
+   shape:(n,3)
+    n: Number of points in the original object.
+    3:x,y,density  
   """
   points = polygon._np(isNorm=True,onPoint=True)
   xy=points[:,-2:]
@@ -231,7 +229,7 @@ def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100):
   npoints = len(points)
   
   inearest = np.zeros(npoints) + maxDistance
-  t=tqdm(total=npoints,unit_scale=True)
+  if progress:t=tqdm(total=npoints,unit_scale=True)
   
   for x in range(0,npoints,nvalue):
     xn = np.minimum(npoints,x+nvalue)
@@ -239,8 +237,8 @@ def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100):
     l = kdtree.query_ball_point(subpoints[:,-2:],maxDistance)
     l,e=ll2numpy(l)
     inearest[x:xn]=_inearest_Polygon(xy[l],subpoints,angle)
-    t.update(xn-x)
-  t.close()
+    if progress:t.update(xn-x)
+  if progress:t.close()
   
   points = np.column_stack((xy,inearest))
   
