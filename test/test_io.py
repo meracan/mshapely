@@ -82,6 +82,23 @@ def test_tonumpy():
      [1.,1.,0,0.25,0.25],
   ]))
   
+  np.testing.assert_array_equal(line._np(isSegment=True), np.array([
+  [0., 1., 0., 0.],
+ [1. ,1., 0., 1.],
+ [2. ,1., 1., 1.],
+ [3. ,1., 1., 0.],
+ [0. ,1., 0., 0.],
+    ]))
+  line1=LineString([(0, 0), (1, 0),(3,0),(6,0),(9,0)])
+  np.testing.assert_array_equal(line1._np(isSegment=True), np.array([
+ [0., 1. ,0., 0.],
+ [1., 1. ,1. ,0.],
+ [2., 2., 3. ,0.],
+ [3. ,3., 6. ,0.],
+ [4., 3., 9. ,0.],
+    ]))
+  
+  
   
 
 

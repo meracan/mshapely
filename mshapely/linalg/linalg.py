@@ -48,7 +48,7 @@ def normalVector(points, onPoint=True):
   
   Example
   ------- 
-  TODO
+  TODO: Might not work with open linestring
   
   """
   

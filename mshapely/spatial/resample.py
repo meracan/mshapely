@@ -50,10 +50,11 @@ def _dresample_LineString(linestring, df,progress=False):
   minDensity=df.minDensity
   maxDensity=df.maxDensity
   minGrowth=df.minGrowth
-  if(linestring.length<df.minDensity):warnings.warn("LineString is shorter than minDensity")
-  if(linestring.length<minDensity):return linestring
+  if(linestring.length<minDensity):
+    warnings.warn("LineString is shorter than minDensity")
+    return linestring
   maxDistance=DF.getl_D(minDensity,minGrowth,maxDensity)
-
+  
   flip=False
   if(df.getDensity([linestring.coords[-1]])<df.getDensity([linestring.coords[0]])):
     flip=True
@@ -99,7 +100,7 @@ def _dresample_LineString(linestring, df,progress=False):
   u=v/s*extra
   
   # print(v,s,u,extra)
-  
+  # print(segments)
   if(n!=0): # Special case when the segment is shorter than the minDensity
     segments = segments[:-n]
     

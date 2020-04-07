@@ -2,6 +2,7 @@ import numpy as np
 from scipy import spatial
 import matplotlib.pyplot as plt
 from shapely.geometry import Point,GeometryCollection
+from tqdm import tqdm
 from ..io import GIS
 from ..misc import ll2numpy
 
@@ -47,13 +48,14 @@ class DF(object):
   dp: ndarray,
     shape:(npoints,6),[[x,y,density,growth,groupId,pointId]]
   """
-  def __init__(self,array,balanced_tree=True,nvalue=1000,**kwargs):
+  def __init__(self,array,balanced_tree=True,nvalue=1000,progress=False,**kwargs):
     self.minDensity=None
     self.maxDensity=None
     self.minGrowth=None
     self.dp=None
     self.balanced_tree=balanced_tree
     self.nvalue =nvalue
+    self.progress=progress
     
     self.add(array,**kwargs)
   
@@ -130,13 +132,15 @@ class DF(object):
     
     n = DF.getn_D(minDensity,minGrowth,maxDensity)
     
+    if self.progress:t=tqdm(total=int(n),position=1)
     i=1
     while(i<=n):
       keepindices = self.getDensity(newpoints[:,:2],DF.getD_n(minDensity,minGrowth,i),newpoints,return_index=True)
       uniques=np.unique(keepindices)
       newpoints=newpoints[uniques]
       i=i+1
-    
+      if self.progress:t.update(1)
+    if self.progress:t.close()
     self.dp=newpoints
     self.kdtree = spatial.cKDTree(newpoints[:,:2],balanced_tree=balanced_tree)
     return self 
@@ -288,10 +292,10 @@ class DF(object):
   
   @staticmethod
   @check
-  def getn_D(d,g,D):
+  def getn_D(d,g,D,ss=0):
     a = np.array(D/d)
     a[a<1.0]=1.0 
-    return np.log(a)/np.log(g)
+    return np.log(a)/np.log(g)+ss
   
   @staticmethod
   @check
@@ -300,8 +304,8 @@ class DF(object):
   
   @staticmethod
   @check
-  def getl_D(d,g,D):
-    n=DF.getn_D(d,g,D)
+  def getl_D(d,g,D,*args):
+    n=DF.getn_D(d,g,D,*args)
     return DF.getl_n(d,g,n)
   
   @staticmethod

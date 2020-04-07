@@ -108,7 +108,9 @@ def test_dresample():
   df = DF(density,minDensity=2.0,maxDensity=100.0)
   r = line.dresample(df,mp=mp)
   
-
+def segmentLength():
+  line = LineString([(0,0),(200,0),(200,0),(200,0),(200,0)])
+  
 
 if __name__ == "__main__":
   test_resample()

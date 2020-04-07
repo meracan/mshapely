@@ -19,8 +19,28 @@ def point2numpy(point):
   
   """
   return np.array(point.coords.xy).T
+
+def segmentsLength(points):
+  n = len(points)
+  isClosed = np.array_equal(points[0], points[n - 1])
+  if isClosed:points=points[:n-1]
+  n=len(points)
+  p0 = points
   
-def linestring2numpy(line,isNorm=False,*args, **kwargs):
+  p1 = np.roll(p0, 1, axis=0)
+  p2 = np.roll(p0, -1, axis=0)
+    
+  d1=np.linalg.norm(p1 -p0, axis=1)
+  d2=np.linalg.norm(p2 -p0, axis=1)
+  minDistance=np.minimum(d1,d2)
+  
+  newpoints=np.column_stack((minDistance,points))
+  if isClosed:
+    newpoints=np.append(newpoints,newpoints[0][None,:],axis=0)
+    
+  return newpoints
+  
+def linestring2numpy(line,isNorm=False,isSegment=False,*args, **kwargs):
   """
   Converts shapely LineString to numpy array
   
@@ -44,6 +64,8 @@ def linestring2numpy(line,isNorm=False,*args, **kwargs):
   n = len(points)
   if isNorm:
     points = normalVector(points, *args, **kwargs)
+  if isSegment:
+    points = segmentsLength(points, *args, **kwargs)
   pointids = np.arange(n)
   if (np.array_equal(points[0], points[n - 1])):
     pointids[n - 1] = 0

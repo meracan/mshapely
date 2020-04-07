@@ -53,6 +53,8 @@ def cArea(d):
   return np.pi*np.power(d*0.5,2.)
     
 
+
+
 def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,progress=False):
   """
   Simplify polygons and remove points by respecting Density Field.
@@ -149,13 +151,20 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,pro
     else:
       fine=fine.simplify(_dd*0.01).buffer(0)
       opolygon=fine
+    # opolygon.plot(polygonStyle={"facecolor":(0,0,0,0)})
+    
+    
     ndomain,prev=process(opolygon,ndomain,prev,d)
+    ndomain.plot()
+    ndomain.savePlot("../data/example2/temp.{}.png".format(i))
     # ndomain.plot()
     if progress:t.update(1)
   if progress:t.close()
-  
+  ndomain.plot()
+  ndomain.savePlot("../data/example2/temp.{}.png".format("00"))
   ndomain,prev=process(None,ndomain,prev,maxDistance,polygon)
-  
+  ndomain.plot()
+  ndomain.savePlot("../data/example2/temp.{}.png".format("000"))
   return ndomain
 
 

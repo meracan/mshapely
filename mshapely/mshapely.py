@@ -21,6 +21,7 @@ from .spatial import DF
 from .spatial import removeHoles_Polygon,remove_Polygons,dsimplify_Polygon,\
 inearest_Polygon,resample_LineString,resample_Polygon,dresample_LineString,dresample_Polygon
 
+
 from .plot import plotPoints,plotLineString,plotLineStrings,plotPolygon,plotPolygons,plotSave
 
 speedups.enable()
@@ -373,6 +374,19 @@ def getExterior(self,*args,**kwargs):
   Get exterior polygon
   """  
   return MultiPolygon([Polygon(polygon.exterior) for polygon in self])
+
+#
+# Segments
+#
+@add_method(GeometryCollection)
+def minSegment(self,*args,**kwargs):
+  return self.toShape().minSegment(*args,**kwargs)
+
+@add_method([Point,MultiPoint,LineString,MultiLineString,Polygon,MultiPolygon])
+def minSegment(self,*args,**kwargs):
+  """ Get segment min length
+  """
+  return self._np(self,isSegment=True)
 
 #
 # Modify intersection function
