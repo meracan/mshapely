@@ -55,7 +55,7 @@ def cArea(d):
 
 
 
-def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,progress=False):
+def dsimplify_Polygon(polygon,df,limitFineDensity=1000,limitCoarseDensity=10000,fine=None,coarse=None,progress=False):
   """
   Simplify polygons and remove points by respecting Density Field.
   It mainly uses the buffer/unbuffer techniques for different density area/zone.
@@ -80,14 +80,21 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,pro
   density = points[:, 2]
   udensity = np.unique(density)
   
-  steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4,4E4,7E4,1E5,2E5,4E5,7E5],dtype=np.float32)
+  steps = np.array([
+    1E1,2E1,4E1,7E1,
+    1E2,2E2,4E2,7E2,
+    1E3,2E3,4E3,7E3,
+    1E4,2E4,4E4,7E4,
+    1E5,2E5,4E5,7E5,
+    1E6,2E6,4E6,7E6,
+    1E7,2E7,4E7,7E7],dtype=np.float32)
   # steps = np.array([10,20,40,70,100,200,400,700,1000,2000,4000,7000,1E4,2E4],dtype=np.float32)
   steps=steps[steps<polygon.length]
   minDensity = df.minDensity
   maxDensity = df.maxDensity
   minGrowth = df.minGrowth
   maxDensity=np.minimum(maxDensity,polygon.length*0.1)
-  maxDistance = DF.getl_D(minDensity,minGrowth,maxDensity)
+  maxDistance = DF.getl_D(minDensity,minGrowth,limitCoarseDensity)
   
   polygon=polygon.buffer(0)
   if fine:fine=fine.buffer(0)
@@ -104,10 +111,10 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,pro
       _d = np.maximum(minDensity,_d) 
       ozone=mps.intersection(tpolygon)
       
-      zone=ozone.buffer(-_d*0.1).buffer(_d*0.1).removeHoles(cArea(_d*0.1)).simplify(_d*0.01)
+      zone=ozone.buffer(-_d*0.2).buffer(_d*0.2).removeHoles(cArea(_d*0.2)).simplify(_d*0.01)
       
       if not zone.is_empty:
-        ozones.append(zone.getExterior().union(mps.buffer(-_d*0.1)))
+        ozones.append(zone.getExterior().union(mps.buffer(-_d*0.2)))
       #  ozones.append(mps)
         zones.append(zone)
     
@@ -139,6 +146,7 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,pro
   
   steps=steps[steps>=minDensity]
   steps=steps[steps<maxDistance]
+  
   ndomain=None
   prev=None
   _dd=None
@@ -155,16 +163,18 @@ def dsimplify_Polygon(polygon,df,limitFineDensity=1000,fine=None,coarse=None,pro
     
     
     ndomain,prev=process(opolygon,ndomain,prev,d)
-    ndomain.plot()
-    ndomain.savePlot("../data/example2/temp.{}.png".format(i))
+    # ndomain.plot()
+    # ndomain.savePlot("../data/example2/temp.{}.png".format(i))
     # ndomain.plot()
     if progress:t.update(1)
   if progress:t.close()
-  ndomain.plot()
-  ndomain.savePlot("../data/example2/temp.{}.png".format("00"))
+  
+  
+  # ndomain.plot()
+  # ndomain.savePlot("../data/example2/temp.{}.png".format("00"))
   ndomain,prev=process(None,ndomain,prev,maxDistance,polygon)
-  ndomain.plot()
-  ndomain.savePlot("../data/example2/temp.{}.png".format("000"))
+  # ndomain.plot()
+  # ndomain.savePlot("../data/example2/temp.{}.png".format("000"))
   return ndomain
 
 
@@ -179,7 +189,7 @@ def _CrossProduct(A,B):
   return A[...,0]*B[...,1]-A[...,1]*B[...,0]
 
 
-def _inearest_Polygon(p2,p1,angle=90.0):
+def _inearest_Polygon(p2,p1,angle=90.0,minDistance=0):
   
   xy=p1[:,-2:]
   V2=p1[:,-4:-2]
@@ -200,14 +210,14 @@ def _inearest_Polygon(p2,p1,angle=90.0):
   
   maxValue=np.maximum(1,np.max(targets))
   targets[np.invert(indices)]=maxValue
-  targets[targets==0]=maxValue
+  targets[targets<=minDistance]=maxValue
   
   
   m=np.min(targets,axis=1)
   
   return m
 
-def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100,progress=False):
+def inearest_Polygon(polygon,maxDistance=1.0,nvalue=100,progress=False,**kwargs):
   """
   Computes nearest interior nodes based on its normal and an angle spread.
   The maximum search distance needs to be specified to avoid searching large quantities of points in large domains. 
@@ -217,6 +227,9 @@ def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100,progress=Fals
   maxDistance:float
    Maximum search distance.
    Default is 1.0
+  minDistance:float
+    Minimum search distance
+    Default is 0.0
   angle:float,0<angle<180.0 
    Angle spread.  Limits the search within the angle spread.
    Default value is 90.0. 
@@ -245,7 +258,7 @@ def inearest_Polygon(polygon,maxDistance=1.0,angle=90.0,nvalue=100,progress=Fals
     subpoints = points[x:xn]
     l = kdtree.query_ball_point(subpoints[:,-2:],maxDistance)
     l,e=ll2numpy(l)
-    inearest[x:xn]=_inearest_Polygon(xy[l],subpoints,angle)
+    inearest[x:xn]=_inearest_Polygon(xy[l],subpoints,**kwargs)
     if progress:t.update(xn-x)
   if progress:t.close()
   

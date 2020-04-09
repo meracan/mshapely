@@ -131,6 +131,7 @@ def _np(self,*args,**kwargs):
 
 @add_method(Polygon)
 def _np(self,*args,**kwargs):
+  # print(args)
   return polygon2numpy(self,*args,**kwargs)
 
 @add_method(MultiPolygon)
@@ -386,7 +387,7 @@ def minSegment(self,*args,**kwargs):
 def minSegment(self,*args,**kwargs):
   """ Get segment min length
   """
-  return self._np(self,isSegment=True)
+  return self._np(isNorm=False,isSegment=True)
 
 #
 # Modify intersection function

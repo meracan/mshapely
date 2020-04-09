@@ -48,16 +48,18 @@ class DF(object):
   dp: ndarray,
     shape:(npoints,6),[[x,y,density,growth,groupId,pointId]]
   """
-  def __init__(self,array,balanced_tree=True,nvalue=1000,progress=False,**kwargs):
-    self.minDensity=None
-    self.maxDensity=None
-    self.minGrowth=None
+  def __init__(self,array=None,balanced_tree=True,step=1,nvalue=1000,progress=False,**kwargs):
+    self.minDensity=kwargs.pop('minDensity', None)
+    self.maxDensity=kwargs.pop('maxDensity', None)
+    self.minGrowth=kwargs.pop('minGrowth', None)
+    self.maxDensitySimplify=kwargs.pop('maxDensitySimplify', self.maxDensity)
     self.dp=None
     self.balanced_tree=balanced_tree
+    self.step=step
     self.nvalue =nvalue
     self.progress=progress
-    
-    self.add(array,**kwargs)
+    if array is not None:
+      self.add(array,**kwargs)
   
   def _checkInput(self,array):
     """
@@ -68,7 +70,7 @@ class DF(object):
     
     return array
     
-  def add(self,array,minDensity=None,maxDensity=None,minGrowth=None):
+  def add(self,array,minDensity=None,maxDensity=None,minGrowth=None,maxDensitySimplify=None):
     """
     Add points to the density field
     
@@ -89,8 +91,11 @@ class DF(object):
       self.minDensity= np.min(array[:,2]) if minDensity is None else minDensity
     if self.maxDensity is None:
       self.maxDensity= np.max(array[:,2]) if maxDensity is None else maxDensity
+      self.maxDensitySimplify=self.maxDensity
     if self.minGrowth is None:
       self.minGrowth = np.min(array[:,3]) if minGrowth is None else minGrowth
+    if maxDensitySimplify is not None:
+      self.maxDensitySimplify=maxDensitySimplify
     
     minDensity=self.minDensity
     maxDensity=self.maxDensity
@@ -105,6 +110,31 @@ class DF(object):
     
     self._simplify(array)
     return self
+  
+  def inearest(self,geo,minLength=False,**kwargs):
+    """
+    Compute density field based on interior nearest points
+    
+    Parameters
+    ----------
+    geo:Polygon
+    minLength:float
+    
+    angle:
+    
+    
+    """
+    maxDistance = DF.getl_D(self.minDensity,self.minGrowth,self.maxDensity)
+    distance=geo.inearest(maxDistance=maxDistance,**kwargs)
+    
+    distance[:,2]=DF.getD_l(self.minDensity,self.minGrowth,distance[:,2])
+    if minLength:
+      _density=geo.minSegment()[:,-3]
+      distance[:,2]=np.minimum(distance[:,2],_density)
+    newdensity=np.column_stack((distance,np.ones(len(distance))*self.minGrowth))
+    self.add(newdensity)
+    return self
+    
   
   def _simplify(self,points):
     """
@@ -123,14 +153,15 @@ class DF(object):
     minGrowth=self.minGrowth
     maxDensity=self.maxDensity
     balanced_tree = self.balanced_tree
+    maxDensitySimplify=self.maxDensitySimplify
     
     newpoints=points
     
     # Remove duplicates to a meter
     v,i=np.unique(np.round(newpoints[:,:2],0),return_index=True,axis=0)
     newpoints=newpoints[i]
-    
-    n = DF.getn_D(minDensity,minGrowth,maxDensity)
+    print(minDensity,minGrowth,maxDensitySimplify)
+    n = DF.getn_D(minDensity,minGrowth,maxDensitySimplify)
     
     if self.progress:t=tqdm(total=int(n),position=1)
     i=1
@@ -138,8 +169,8 @@ class DF(object):
       keepindices = self.getDensity(newpoints[:,:2],DF.getD_n(minDensity,minGrowth,i),newpoints,return_index=True)
       uniques=np.unique(keepindices)
       newpoints=newpoints[uniques]
-      i=i+1
-      if self.progress:t.update(1)
+      i=i+self.step
+      if self.progress:t.update(self.step)
     if self.progress:t.close()
     self.dp=newpoints
     self.kdtree = spatial.cKDTree(newpoints[:,:2],balanced_tree=balanced_tree)

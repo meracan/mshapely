@@ -89,6 +89,7 @@ def polygon2numpy(polygon, *args, **kwargs):
   TODO
   
   """  
+  # print(args,kwargs)
   exterior = linestring2numpy(polygon.exterior, *args, **kwargs)
   
   n = len(exterior)
